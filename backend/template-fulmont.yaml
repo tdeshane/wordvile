@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Fulmont Word Game Backend
+
+Globals:
+  Function:
+    Environment:
+      Variables:
+        S3_BUCKET: fulmont-word-game-words
+
+Resources:
+  # S3 bucket policy for Lambda access
+  S3AccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+            Resource:
+              - !Sub 'arn:aws:s3:::fulmont-word-game-words'
+              - !Sub 'arn:aws:s3:::fulmont-word-game-words/*'
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 10
+      Policies:
+        - !Ref S3AccessPolicy
+      Environment:
+        Variables:
+          ADMIN_TOKEN: changeme # Set your real token here or in the AWS Console
+          DATA_DIR: /tmp/data
+
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: NONE
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token'"
+              Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token'"
+              Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+
+  GetWordsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Policies:
+        - !Ref S3AccessPolicy
+      Environment:
+        Variables:
+          DATA_DIR: /tmp/data
+      Events:
+        GetWords:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /words/{game}
+            Method: GET
+            
+  PostWordsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Policies:
+        - !Ref S3AccessPolicy
+      Environment:
+        Variables:
+          DATA_DIR: /tmp/data
+          ADMIN_TOKEN: changeme
+      Events:
+        PostWords:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /words/{game}
+            Method: POST
+            
+  VerifyPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          ADMIN_TOKEN: changeme
+      Events:
+        VerifyPassword:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /verify-admin-password
+            Method: POST
+
+  # Add explicit OPTIONS methods for CORS preflight requests
+  OptionsForWordsPathFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          DATA_DIR: /tmp/data
+      Events:
+        OptionsForWordsPath:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /words/{game}
+            Method: OPTIONS
+            
+  OptionsForVerifyPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          ADMIN_TOKEN: changeme
+      Events:
+        OptionsForVerifyPassword:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /verify-admin-password
+            Method: OPTIONS
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod" 

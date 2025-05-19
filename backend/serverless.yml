@@ -1,0 +1,26 @@
+service: bible-word-game-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    ADMIN_TOKEN: ${env:ADMIN_TOKEN}
+    PORT: 4000
+
+functions:
+  app:
+    handler: index.handler
+    events:
+      - http: ANY /
+      - http: 'ANY {proxy+}'
+
+package:
+  exclude:
+    - node_modules/**
+    - data/**
+    - .env
+    - README.md
+
+plugins:
+  - serverless-offline 
