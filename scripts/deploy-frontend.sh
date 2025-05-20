@@ -85,7 +85,7 @@ fi
 
 # Sync to S3
 echo -e "\n${YELLOW}=== Syncing to S3 bucket: $BUCKET ===${NC}"
-aws s3 sync "$BUILD_DIR/" "s3://$BUCKET/" --delete --acl public-read \
+aws s3 sync "$BUILD_DIR/" "s3://$BUCKET/" --delete \
   --cache-control "public, max-age=31536000, immutable" \
   --exclude "index.html" \
   --exclude "asset-manifest.json"
@@ -93,7 +93,7 @@ aws s3 sync "$BUILD_DIR/" "s3://$BUCKET/" --delete --acl public-read \
 # Upload HTML files with different cache settings
 echo -e "\n${YELLOW}=== Uploading HTML files with proper cache headers ===${NC}"
 aws s3 cp "$BUILD_DIR/index.html" "s3://$BUCKET/index.html" --content-type "text/html" \
-  --cache-control "public, max-age=0, must-revalidate" --acl public-read
+  --cache-control "public, max-age=0, must-revalidate"
 
 # Get the CloudFront distribution ID if not provided
 if [ -z "$DISTRIBUTION_ID" ]; then
