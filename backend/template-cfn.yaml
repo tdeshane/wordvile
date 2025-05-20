@@ -59,6 +59,68 @@ Resources:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: words
+      
+  # API Gateway Method for POST /words
+  PostWordsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref WordsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.header.X-Admin-Token: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PostWordsFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 403
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # CORS for POST /words
+  PostWordsCorsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref WordsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
 
   # API Gateway Resource for /words/{game}
   WordsGameResource:
@@ -75,6 +137,166 @@ Resources:
       RestApiId: !Ref ApiGateway
       ParentId: !GetAtt ApiGateway.RootResourceId
       PathPart: verify-password
+      
+  # Lambda Function for POST /words
+  PostWordsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Timeout: 30
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3BucketName
+          ADMIN_TOKEN: !Ref AdminToken
+      Code:
+        ZipFile: |
+          // Using AWS SDK v3 which is included in the Node.js 20.x runtime
+          const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+          const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+          const { sdkStreamMixin } = require('@aws-sdk/util-stream');
+          const { Readable } = require('stream');
+          
+          const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+          
+          console.log('Loading PostWordsFunction');
+          
+          // Helper function to stream to string
+          const streamToString = (stream) =>
+            new Promise((resolve, reject) => {
+              const chunks = [];
+              stream.on('data', (chunk) => chunks.push(chunk));
+              stream.on('error', reject);
+              stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+            });
+          
+          exports.handler = async (event, context) => {
+              console.log('Received event:', JSON.stringify(event, null, 2));
+              
+              // Check admin token
+              const adminToken = event.headers?.['x-admin-token'] || event.headers?.['X-Admin-Token'];
+              if (adminToken !== process.env.ADMIN_TOKEN) {
+                  return {
+                      statusCode: 403,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                      },
+                      body: JSON.stringify({ error: 'Unauthorized' })
+                  };
+              }
+              
+              const bucketName = process.env.S3_BUCKET || '${S3BucketName}';
+              const game = 'default'; // For now, using a single game
+              const key = `${game}.json`;
+              
+              try {
+                  // Parse the request body
+                  let requestBody;
+                  try {
+                      requestBody = JSON.parse(event.body || '{}');
+                  } catch (e) {
+                      return {
+                          statusCode: 400,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*',
+                              'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                              'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                          },
+                          body: JSON.stringify({ error: 'Invalid JSON body' })
+                      };
+                  }
+                  
+                  // Validate request body
+                  if (!requestBody.word || !requestBody.definition) {
+                      return {
+                          statusCode: 400,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*',
+                              'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                              'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                          },
+                          body: JSON.stringify({ error: 'Missing required fields: word and definition are required' })
+                      };
+                  }
+                  
+                  // Get existing words
+                  let words = [];
+                  try {
+                      const getCommand = new GetObjectCommand({
+                          Bucket: bucketName,
+                          Key: key
+                      });
+                      const { Body } = await s3Client.send(getCommand);
+                      const bodyContents = await streamToString(Body);
+                      words = JSON.parse(bodyContents);
+                      if (!Array.isArray(words)) {
+                          words = [];
+                      }
+                  } catch (error) {
+                      if (error.name !== 'NoSuchKey') {
+                          console.error('Error getting existing words:', error);
+                          throw error;
+                      }
+                      // If the file doesn't exist, we'll create it with the new word
+                  }
+                  
+                  // Add new word
+                  const newWord = {
+                      word: requestBody.word,
+                      definition: requestBody.definition,
+                      createdAt: new Date().toISOString()
+                  };
+                  
+                  words.push(newWord);
+                  
+                  // Save back to S3
+                  const putCommand = new PutObjectCommand({
+                      Bucket: bucketName,
+                      Key: key,
+                      Body: JSON.stringify(words, null, 2),
+                      ContentType: 'application/json'
+                  });
+                  
+                  await s3Client.send(putCommand);
+                  
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                      },
+                      body: JSON.stringify(newWord)
+                  };
+              } catch (error) {
+                  console.error('Error:', error);
+                  
+                  return {
+                      statusCode: 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                      },
+                      body: JSON.stringify({
+                          error: 'Failed to save word',
+                          message: error.message,
+                          name: error.name,
+                          code: error.Code || error.code,
+                          statusCode: error.statusCode || 500,
+                          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                      })
+                  };
+              }
+          };
 
   # Lambda Functions
   GetWordsFunction:
@@ -82,58 +304,98 @@ Resources:
     Properties:
       Handler: index.handler
       Runtime: nodejs20.x
+      Timeout: 30
       Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3BucketName
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const s3 = new AWS.S3();
+          // Using AWS SDK v3 which is included in the Node.js 20.x runtime
+          const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+          const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+          const { sdkStreamMixin } = require('@aws-sdk/util-stream');
+          const { Readable } = require('stream');
           
-          exports.handler = async (event) => {
-            const bucketName = process.env.S3_BUCKET || '${S3BucketName}';
-            const game = event.pathParameters?.game || 'default';
-            const key = `${game}.json`;
-            
-            try {
-              const data = await s3.getObject({
-                Bucket: bucketName,
-                Key: key
-              }).promise();
+          const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+          
+          console.log('Loading function');
+          
+          // Helper function to stream to string
+          const streamToString = (stream) =>
+            new Promise((resolve, reject) => {
+              const chunks = [];
+              stream.on('data', (chunk) => chunks.push(chunk));
+              stream.on('error', reject);
+              stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+            });
+          
+          exports.handler = async (event, context) => {
+              console.log('Received event:', JSON.stringify(event, null, 2));
               
-              return {
-                statusCode: 200,
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': '*',
-                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
-                  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-                },
-                body: data.Body.toString('utf-8')
-              };
-            } catch (error) {
-              if (error.code === 'NoSuchKey') {
-                return {
-                  statusCode: 200,
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
-                    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-                  },
-                  body: JSON.stringify([])
-                };
+              const bucketName = process.env.S3_BUCKET
+              const game = 'default';
+              const key = `${game}.json`;
+              
+              console.log(`Getting object from bucket: ${bucketName}, key: ${key}`);
+              
+              try {
+                  const command = new GetObjectCommand({
+                      Bucket: bucketName,
+                      Key: key
+                  });
+                  
+                  const { Body } = await s3Client.send(command);
+                  console.log('Successfully retrieved object from S3');
+                  
+                  // Convert the Readable stream to a string
+                  const bodyContents = await streamToString(Body);
+                  
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                      },
+                      body: bodyContents
+                  };
+              } catch (error) {
+                  console.error('Error:', error);
+                  
+                  if (error.name === 'NoSuchKey' || error.Code === 'NoSuchKey') {
+                      console.log('No such key - returning empty array');
+                      return {
+                          statusCode: 200,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*',
+                              'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                              'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                          },
+                          body: JSON.stringify([])
+                      };
+                  }
+                  
+                  return {
+                      statusCode: 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
+                          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+                      },
+                      body: JSON.stringify({
+                          error: 'Failed to fetch words',
+                          message: error.message,
+                          name: error.name,
+                          code: error.Code || error.code,
+                          statusCode: error.statusCode || 500,
+                          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                      })
+                  };
               }
-              
-              return {
-                statusCode: 500,
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': '*',
-                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token',
-                  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-                },
-                body: JSON.stringify({ error: 'Failed to fetch words' })
-              };
-            }
           };
       Environment:
         Variables:
@@ -183,7 +445,7 @@ Resources:
             method.response.header.Access-Control-Allow-Headers: true
             method.response.header.Access-Control-Allow-Methods: true
 
-  # Lambda Permission for API Gateway
+  # Lambda Permission for API Gateway GET method
   GetWordsPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -191,6 +453,15 @@ Resources:
       FunctionName: !GetAtt GetWordsFunction.Arn
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/GET/words/*'
+      
+  # Lambda Permission for API Gateway POST method
+  PostWordsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt PostWordsFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/words'
 
   # API Gateway Deployment
   ApiDeployment:
@@ -198,6 +469,8 @@ Resources:
     DependsOn:
       - GetWordsMethod
       - GetWordsCorsMethod
+      - PostWordsMethod
+      - PostWordsCorsMethod
     Properties:
       RestApiId: !Ref ApiGateway
       StageName: Prod
