@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WordScrambleGame from './WordScrambleGame';
 import HangmanGame from './HangmanGame';
 import WordSearchGame from './WordSearchGame';
+import SilverGame from './SilverGame';
 import '../styles/TabsContainer.css';
 
 // Helper to get query param
@@ -9,7 +10,7 @@ function getQueryParam(name: string) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-type Tab = 'wordScramble' | 'hangman' | 'wordSearch';
+type Tab = 'wordScramble' | 'hangman' | 'wordSearch' | 'silver';
 
 const TabsContainer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('wordScramble');
@@ -85,6 +86,12 @@ const TabsContainer: React.FC = () => {
           onClick={() => changeTab('wordSearch')}
         >
           Word Search
+        </button>
+        <button 
+          className={`tab ${activeTab === 'silver' ? 'active' : ''}`}
+          onClick={() => changeTab('silver')}
+        >
+          Silver's Challenge
         </button>
       </div>
 

@@ -312,6 +312,143 @@ app.post('/words/:game', async (req, res) => {
   }
 });
 
+// Helper function to get Silver state from S3 or local file
+async function getSilverState() {
+  const s3Key = 'silver.json';
+  try {
+    console.log(`Getting Silver state from S3 bucket ${S3_BUCKET}, key ${s3Key}`);
+    const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: s3Key });
+    const response = await s3Client.send(command);
+    const dataString = await response.Body.transformToString();
+    return JSON.parse(dataString);
+  } catch (s3Error) {
+    console.log(`Error getting Silver state from S3: ${s3Error.message}. Trying local fallback.`);
+    const localFilePath = path.join(DEFAULT_DATA_DIR, s3Key);
+    if (fs.existsSync(localFilePath)) {
+      console.log(`Using default Silver state data from ${localFilePath}`);
+      const fileData = fs.readFileSync(localFilePath, 'utf8');
+      return JSON.parse(fileData);
+    } else {
+      throw new Error('Silver state configuration not found in S3 or locally.');
+    }
+  }
+}
+
+// Helper function to save Silver state to S3 and local file
+async function saveSilverState(state) {
+  const s3Key = 'silver.json';
+  const stateString = JSON.stringify(state, null, 2);
+  try {
+    console.log(`Saving Silver state to S3 bucket ${S3_BUCKET}, key ${s3Key}`);
+    const command = new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: s3Key,
+      Body: stateString,
+      ContentType: 'application/json'
+    });
+    await s3Client.send(command);
+    console.log(`Successfully saved Silver state to S3`);
+  } catch (s3Error) {
+    console.error(`Error saving Silver state to S3: ${s3Error.message}`);
+    // Continue to save locally even if S3 fails for now
+  }
+  try {
+    const localFilePath = path.join(DATA_DIR, s3Key);
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(localFilePath, stateString, 'utf8');
+    console.log(`Silver state saved to ${localFilePath}`);
+  } catch (localError) {
+    console.error(`Failed to save Silver state locally: ${localError.message}`);
+    throw new Error('Failed to save Silver state.'); // If local save also fails, then it's a problem
+  }
+}
+
+// GET /silver/state
+app.get('/silver/state', async (req, res) => {
+  try {
+    console.log(`GET /silver/state request received`);
+    const silverStateData = await getSilverState();
+
+    if (!silverStateData || typeof silverStateData !== 'object') {
+      console.log('silver.json not found, empty, or not a valid JSON object.');
+      return res.status(404).json({ error: 'Silver state configuration not found or invalid.' });
+    }
+    console.log(`Successfully retrieved silver state data:`, JSON.stringify(silverStateData).substring(0,100) + "...");
+    return res.json(silverStateData);
+  } catch (error) {
+    console.error(`Unexpected error in GET /silver/state: ${error.message}`, error);
+    return res.status(500).json({ error: 'Server error processing Silver state request.' });
+  }
+});
+
+// POST /silver/absorb
+app.post('/silver/absorb', async (req, res) => {
+  try {
+    const { emeralds } = req.body;
+    console.log(`POST /silver/absorb request received with ${emeralds} emeralds`);
+    
+    if (typeof emeralds !== 'number' || emeralds <= 0) {
+      return res.status(400).json({ error: 'Invalid number of emeralds.' });
+    }
+
+    const currentState = await getSilverState();
+    currentState.emeraldsCollected = (currentState.emeraldsCollected || 0) + emeralds;
+    currentState.corruptionLevel = Math.max(0, (currentState.corruptionLevel || 100) - (emeralds * 5)); // Each emerald reduces corruption
+
+    // Check for redemption
+    if (currentState.corruptionLevel <= 0) {
+      currentState.state = 'redeemed';
+      currentState.appearance = {
+        eyes: "shining silver",
+        aura: "gentle, glowing light",
+        form: "radiant and whole"
+      };
+      currentState.description = "Redeemed by the power of collected emeralds, Silver is restored to her former glory. The darkness has lifted, and her command over words now brings hope and life back to Wordvile.";
+    } else {
+      // Potentially update appearance based on partial redemption if desired
+      // For now, we only change to fully redeemed or stay corrupted.
+    }
+
+    await saveSilverState(currentState);
+    return res.json(currentState);
+  } catch (error) {
+    console.error(`Unexpected error in POST /silver/absorb: ${error.message}`, error);
+    return res.status(500).json({ error: 'Server error processing absorb request.' });
+  }
+});
+
+// POST /silver/drain
+app.post('/silver/drain', async (req, res) => {
+  try {
+    const { words } = req.body; // Assuming words is a number representing the amount of power drained
+    console.log(`POST /silver/drain request received for ${words} words`);
+
+    if (typeof words !== 'number' || words <= 0) {
+      return res.status(400).json({ error: 'Invalid number of words to drain.' });
+    }
+
+    const currentState = await getSilverState();
+    // Draining words increases corruption, unless she is already redeemed.
+    if (currentState.state === 'corrupted') {
+      currentState.corruptionLevel = Math.min(100 + (words * 2) , (currentState.corruptionLevel || 0) + (words * 2)); // Each word drained increases corruption
+      // Potentially update appearance if corruption increases significantly
+      if (currentState.corruptionLevel > 100 && currentState.appearance.eyes !== "fiery red") {
+         currentState.appearance.eyes = "fiery red"; // Example of appearance change due to more corruption
+         currentState.appearance.aura = "pulsating dark energy";
+      }
+    }
+
+
+    await saveSilverState(currentState);
+    return res.json(currentState);
+  } catch (error) {
+    console.error(`Unexpected error in POST /silver/drain: ${error.message}`, error);
+    return res.status(500).json({ error: 'Server error processing drain request.' });
+  }
+});
+
 // POST /verify-admin-password (through Express)
 app.post('/verify-admin-password', (req, res) => {
   try {
@@ -462,4 +599,4 @@ if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
   app.listen(PORT, () => {
     console.log(`Word Game backend running on port ${PORT}`);
   });
-} 
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import './App.css';
 import TabsContainer from './components/TabsContainer';
+import { SilverProvider } from './components/SilverContext';
 
 function App() {
   return (
@@ -10,7 +11,9 @@ function App() {
         <p>Challenge yourself with fun word puzzles!</p>
       </header>
       <main>
-        <TabsContainer />
+        <SilverProvider>
+          <TabsContainer />
+        </SilverProvider>
       </main>
       <footer>
         <p>Created with ❤️ for word game enthusiasts</p>

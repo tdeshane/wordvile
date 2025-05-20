@@ -1,0 +1,132 @@
+{
+  "name": "Silver",
+  "title": "Princess of Wordvile",
+  "state": "redeemed",
+  "appearance": {
+    "eyes": "shining silver",
+    "aura": "gentle, glowing light",
+    "form": "radiant and whole"
+  },
+  "description": "Redeemed by the power of collected emeralds, Silver is restored to her former glory. The darkness has lifted, and her command over words now brings hope and life back to Wordvile.",
+  "dialogue": {
+    "corrupted": [
+      "Words... fade...",
+      "The emeralds... they burn...",
+      "Leave this place... before the silence takes you too.",
+      "Menchuba's shadow... it clings...",
+      "Is there... hope?"
+    ],
+    "redeemed": [
+      "The light returns! Wordvile breathes again!",
+      "Thank you, brave one. Your words have healed me.",
+      "The darkness has lifted. I am Silver, restored!",
+      "May your words always bring light.",
+      "Wordvile will flourish, thanks to you."
+    ]
+  },
+  "emeraldsCollected": 40,
+  "corruptionLevel": 0,
+  "redemptionThreshold": 100,
+  "words": [
+    {
+      "word": "create",
+      "points": 10,
+      "color": "silver"
+    },
+    {
+      "word": "drain",
+      "points": 12,
+      "color": "purple"
+    },
+    {
+      "word": "word",
+      "points": 8,
+      "color": "gold"
+    },
+    {
+      "word": "silver",
+      "points": 15,
+      "color": "silver"
+    },
+    {
+      "word": "power",
+      "points": 10,
+      "color": "blue"
+    },
+    {
+      "word": "light",
+      "points": 12,
+      "color": "white"
+    },
+    {
+      "word": "dark",
+      "points": 12,
+      "color": "black"
+    },
+    {
+      "word": "magic",
+      "points": 14,
+      "color": "purple"
+    },
+    {
+      "word": "story",
+      "points": 9,
+      "color": "silver"
+    },
+    {
+      "word": "legend",
+      "points": 11,
+      "color": "gold"
+    },
+    {
+      "word": "princess",
+      "points": 13,
+      "color": "silver"
+    },
+    {
+      "word": "corrupted",
+      "points": 14,
+      "color": "purple"
+    },
+    {
+      "word": "redeemed",
+      "points": 15,
+      "color": "silver"
+    },
+    {
+      "word": "temple",
+      "points": 10,
+      "color": "gold"
+    },
+    {
+      "word": "emerald",
+      "points": 12,
+      "color": "green"
+    },
+    {
+      "word": "crystal",
+      "points": 11,
+      "color": "blue"
+    },
+    {
+      "word": "chain",
+      "points": 9,
+      "color": "silver"
+    },
+    {
+      "word": "mist",
+      "points": 8,
+      "color": "purple"
+    },
+    {
+      "word": "shhh",
+      "points": 13,
+      "color": "silver"
+    },
+    {
+      "word": "domain",
+      "points": 10,
+      "color": "gold"
+    }
+  ]
+}

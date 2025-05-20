@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/HangmanGame.css';
+import { useSilver } from './SilverContext';
 
 // Default word list (empty)
 const DEFAULT_WORDS: { word: string; hint: string }[] = [];
@@ -43,6 +44,35 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
   onAdminLogout,
   onAdminModeToggle
 }) => {
+  const { silverState, updateSilverState, absorbEmeralds, drainWords } = useSilver();
+
+  // Add Silver-related state
+  const [silverAppearance, setSilverAppearance] = useState(silverState.appearance);
+  const [silverDialogue, setSilverDialogue] = useState('');
+
+  useEffect(() => {
+    setSilverAppearance(silverState.appearance);
+    // Update dialogue based on Silver's state
+    const dialogueOptions = silverState.state === 'corrupted' 
+      ? silverState.dialogue.corrupted
+      : silverState.dialogue.redeemed;
+    if (dialogueOptions && dialogueOptions.length > 0) {
+      const dialogue = dialogueOptions[Math.floor(Math.random() * dialogueOptions.length)];
+      setSilverDialogue(dialogue);
+    } else {
+      setSilverDialogue(''); // Set a default or empty dialogue if options are not available
+    }
+  }, [silverState]);
+
+  // Add Silver interaction handlers
+  const handleSilverInteraction = async (action: 'absorb' | 'drain') => {
+    if (action === 'absorb') {
+      await absorbEmeralds(10); // Absorb some emeralds
+    } else {
+      await drainWords(5); // Drain some words
+    }
+  };
+
   // Admin mode state
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -73,7 +103,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       const FALLBACK_PASSWORD = 'Pr@yer&WordG@me2025!';
       if (passwordInput === FALLBACK_PASSWORD) {
         console.log('Using local verification due to CORS issues with backend');
-        onAdminLogin(FALLBACK_PASSWORD);
+        onAdminLogin(FALLBACK_PASSWORD); // Pass the token/password
         setPasswordError('');
         setIsVerifying(false);
         return;
@@ -95,11 +125,11 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.adminToken) { // Ensure adminToken is received
         onAdminLogin(data.adminToken);
         setPasswordError('');
       } else {
-        setPasswordError('Incorrect password');
+        setPasswordError('Incorrect password or token missing');
       }
     } catch (error) {
       console.error('Error verifying password:', error);
@@ -119,15 +149,17 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     if (stored) {
       try {
         const arr = JSON.parse(stored);
-        if (Array.isArray(arr) && arr.every(w => w.word && w.hint)) {
+        if (Array.isArray(arr) && arr.every(w => typeof w.word === 'string' && typeof w.hint === 'string')) {
           return arr;
         }
-      } catch {}
+      } catch (e) {
+        console.error("Error parsing words from localStorage", e)
+      }
     }
     return DEFAULT_WORDS;
   };
 
-  const WORDS = getWords();
+  // const WORDS = getWords(); // This is not used directly, customWords is used
 
   // Game state
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -154,34 +186,19 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         
         if (response.ok) {
           const data = await response.json();
-          if (Array.isArray(data) && data.every(w => w.word && w.hint)) {
+          if (Array.isArray(data) && data.every(w => typeof w.word === 'string' && typeof w.hint === 'string')) {
             setCustomWords(data);
-            // Also save to localStorage as backup
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
           } else {
-            // Fallback to localStorage if API returns invalid data
-            const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (stored) {
-              try {
-                const arr = JSON.parse(stored);
-                if (Array.isArray(arr) && arr.every(w => w.word && w.hint)) {
-                  setCustomWords(arr);
-                }
-              } catch {}
+            const storedWords = getWords(); // Use existing getter
+            setCustomWords(storedWords);
+            if (!Array.isArray(data) || !data.every(w => typeof w.word === 'string' && typeof w.hint === 'string')) {
+                 console.warn("API returned invalid data, using localStorage fallback.");
             }
           }
         } else {
-          // Fallback to localStorage if API returns an error
-          const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-          if (stored) {
-            try {
-              const arr = JSON.parse(stored);
-              if (Array.isArray(arr) && arr.every(w => w.word && w.hint)) {
-                setCustomWords(arr);
-              }
-            } catch {}
-          }
-          
+          const storedWords = getWords();
+          setCustomWords(storedWords);
           if (response.status === 404) {
             console.log('No custom word list found on server, using localStorage');
           } else {
@@ -190,18 +207,10 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         }
       } catch (error) {
         console.error('Error fetching words:', error);
+        const storedWords = getWords();
+        setCustomWords(storedWords);
         setLoadError(`Error loading words: ${error instanceof Error ? error.message : 'Unknown error'}`);
         
-        // Fallback to localStorage in case of error
-        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (stored) {
-          try {
-            const arr = JSON.parse(stored);
-            if (Array.isArray(arr) && arr.every(w => w.word && w.hint)) {
-              setCustomWords(arr);
-            }
-          } catch {}
-        }
       } finally {
         setIsLoading(false);
       }
@@ -219,18 +228,17 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       
       try {
         console.log(`Saving words to ${API_BASE}/words/hangman`);
-        // Use either the adminToken or fallback to the hardcoded password
-        const tokenToUse = adminToken || 'Pr@yer&WordG@me2025!';
+        const tokenToUse = adminToken || 'Pr@yer&WordG@me2025!'; // Fallback if adminToken is not yet set
         
         const response = await fetch(`${API_BASE}/words/hangman`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Admin-Token': tokenToUse
+            'X-Admin-Token': tokenToUse 
           },
           body: JSON.stringify({ 
             words: customWords,
-            token: tokenToUse // Also include in body as fallback
+            token: tokenToUse 
           })
         });
         
@@ -245,7 +253,6 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         }
       } catch (error) {
         console.error('Error saving words to server:', error);
-        // Continue execution - we'll rely on localStorage as backup
       }
     };
     
@@ -254,40 +261,39 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     }
   }, [customWords, isAdmin, isPasswordVerified, adminToken]);
   
-  // Use customWords for the game instead of localStorage
   const ACTIVE_WORDS = customWords;
   
-  // Initialize a new word when game starts or moves to next word
   useEffect(() => {
-    if (!isAdmin && !isLoading && ACTIVE_WORDS[currentIndex]) {
-      const word = ACTIVE_WORDS[currentIndex].word;
-      setCurrentWord(word);
+    if (!isAdmin && !isLoading && ACTIVE_WORDS.length > 0 && ACTIVE_WORDS[currentIndex]) {
+      const wordData = ACTIVE_WORDS[currentIndex];
+      setCurrentWord(wordData.word);
       setGuessedLetters([]);
       setWrongAttempts(0);
       setGameStatus('playing');
       setShowHint(false);
+      setFullWordGuess(''); // Reset full word guess
+    } else if (!isAdmin && !isLoading && ACTIVE_WORDS.length === 0) {
+      // Handle case where no words are loaded
+      setLoadError("No words available to play.");
     }
   }, [currentIndex, isAdmin, isLoading, ACTIVE_WORDS]);
   
-  // Check if the player has won
   useEffect(() => {
     if (currentWord && gameStatus === 'playing') {
       const isWon = Array.from(currentWord).every(letter => guessedLetters.includes(letter));
       if (isWon) {
         setGameStatus('won');
-        setScore(score + 5);
+        setScore(prevScore => prevScore + 5);
       }
     }
-  }, [currentWord, guessedLetters, gameStatus, score]);
+  }, [currentWord, guessedLetters, gameStatus]); // score removed from deps to avoid re-triggering
   
-  // Check if the player has lost
   useEffect(() => {
     if (wrongAttempts >= MAX_WRONG_ATTEMPTS && gameStatus === 'playing') {
       setGameStatus('lost');
     }
   }, [wrongAttempts, gameStatus]);
   
-  // Handle letter guess
   const handleLetterGuess = (letter: string) => {
     if (gameStatus !== 'playing' || guessedLetters.includes(letter) || isTransitioning) {
       return;
@@ -296,95 +302,109 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     const newGuessedLetters = [...guessedLetters, letter];
     setGuessedLetters(newGuessedLetters);
     
-    // Check if the guessed letter is in the word
     if (!currentWord.includes(letter)) {
-      setWrongAttempts(wrongAttempts + 1);
+      setWrongAttempts(prevAttempts => prevAttempts + 1);
     }
     
-    // Check if this guess has won the game
     const isWinningGuess = Array.from(currentWord).every(char => 
       newGuessedLetters.includes(char)
     );
 
-    if (isWinningGuess) {
+    if (isWinningGuess && gameStatus === 'playing') { // ensure game is still playing
       setIsTransitioning(true);
-      // Use timeout to prevent multiple submissions
+      setGameStatus('won'); // Set status immediately
+      setScore(prevScore => prevScore + 5);
       setTimeout(() => {
         setIsTransitioning(false);
       }, 1500);
     }
   };
   
-  // Display the current word with underscores for unguessed letters
   const getDisplayWord = () => {
+    if (!currentWord) return '';
     return Array.from(currentWord).map(letter => 
       guessedLetters.includes(letter) ? letter : '_'
     ).join(' ');
   };
   
-  // Move to next word
   const nextWordHandler = () => {
+    setIsTransitioning(true); // Prevent actions during transition
     if (currentIndex < ACTIVE_WORDS.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex(prevIndex => prevIndex + 1);
+      setGameStatus('playing'); // Reset status for next word
+      setGuessedLetters([]);
+      setWrongAttempts(0);
+      setShowHint(false);
+      setFullWordGuess('');
     } else {
-      // Game is complete
       alert(`Game complete! Final score: ${score}`);
+      // Optionally reset to first word or show a game over screen
+      setCurrentIndex(0); // Reset to first word for replayability
+      setGameStatus('playing');
+      setGuessedLetters([]);
+      setWrongAttempts(0);
+      setShowHint(false);
+      setFullWordGuess('');
     }
+    setTimeout(() => setIsTransitioning(false), 500); // Short delay for UI to update
   };
   
-  // Show hint
   const showHintHandler = () => {
+    if (gameStatus !== 'playing' || showHint) return; // Prevent multiple penalties or showing hint when not playing
+
     console.log("==== HINT REQUESTED IN HANGMAN ====");
     console.log("Current score before hint penalty:", score);
     
-    // First update the UI to show the hint
     setShowHint(true);
     
-    // Then apply the score penalty (1 point)
-    const newScore = Math.max(0, score - 1);
-    console.log("Applying penalty: new score will be:", newScore);
-    setScore(newScore);
+    setScore(prevScore => Math.max(0, prevScore - 1));
     console.log("==== END HINT REQUEST ====");
   };
   
-  // Admin: handle add/edit/delete word
   const handleAddWord = () => {
     if (!wordInput.trim() || !hintInput.trim()) return;
-    const newWord = wordInput.trim().toUpperCase();
-    const newHint = hintInput.trim();
-    let updated;
+    const newWord = { word: wordInput.trim().toUpperCase(), hint: hintInput.trim()};
+    let updatedWords;
     if (editIndex !== null) {
-      updated = [...customWords];
-      updated[editIndex] = { word: newWord, hint: newHint };
+      updatedWords = customWords.map((item, index) => index === editIndex ? newWord : item);
     } else {
-      updated = [...customWords, { word: newWord, hint: newHint }];
+      updatedWords = [...customWords, newWord];
     }
-    setCustomWords(updated);
-    // Also save to localStorage as backup
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+    setCustomWords(updatedWords);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedWords));
     setWordInput('');
     setHintInput('');
     setEditIndex(null);
   };
+
   const handleEditWord = (idx: number) => {
-    setWordInput(customWords[idx].word);
-    setHintInput(customWords[idx].hint);
-    setEditIndex(idx);
+    if (customWords[idx]) {
+      setWordInput(customWords[idx].word);
+      setHintInput(customWords[idx].hint);
+      setEditIndex(idx);
+    }
   };
+
   const handleDeleteWord = (idx: number) => {
-    const updated = customWords.filter((_, i) => i !== idx);
-    setCustomWords(updated);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-    setWordInput('');
-    setHintInput('');
-    setEditIndex(null);
+    const updatedWords = customWords.filter((_, i) => i !== idx);
+    setCustomWords(updatedWords);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedWords));
+    // Reset inputs if the deleted word was being edited
+    if (editIndex === idx) {
+        setWordInput('');
+        setHintInput('');
+        setEditIndex(null);
+    }
   };
+
   const handleClearAll = () => {
     setCustomWords([]);
     localStorage.removeItem(LOCAL_STORAGE_KEY);
+    setWordInput('');
+    setHintInput('');
+    setEditIndex(null);
   };
   
-  // Switch between admin and player mode
   const handleSwitchMode = () => {
     if (isAdmin) {
       onAdminLogout();
@@ -393,7 +413,6 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     }
   };
   
-  // Render the hangman figure based on wrong attempts
   const renderHangman = () => {
     return (
       <div className="hangman-figure">
@@ -474,20 +493,20 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     setIsTransitioning(true);
     
     if (guess === currentWord) {
-      // Mark all letters as guessed
       const allLetters = Array.from(new Set([...guessedLetters, ...Array.from(currentWord)]));
       setGuessedLetters(allLetters);
       setGameStatus('won');
-      setScore(score + 5);
+      setScore(prevScore => prevScore + 5);
     } else {
-      // Count as two wrong attempts as penalty
-      setWrongAttempts(Math.min(MAX_WRONG_ATTEMPTS, wrongAttempts + 2));
-      setFullWordGuess('');
+      setWrongAttempts(prevAttempts => Math.min(MAX_WRONG_ATTEMPTS, prevAttempts + 2));
+      setFullWordGuess(''); // Clear guess on wrong attempt
     }
     
-    // Reset transitioning state after a delay
     setTimeout(() => {
       setIsTransitioning(false);
+      if (guess === currentWord) { // If won, trigger next word or game end
+         // nextWordHandler(); // Or handle win state appropriately
+      }
     }, 1500);
   };
 
@@ -503,10 +522,10 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
           <h2>Admin Authentication</h2>
           <form onSubmit={handlePasswordSubmit} className="admin-password-form">
             <div>
-              <label htmlFor="password">Enter Admin Password:</label>
+              <label htmlFor="admin-password">Enter Admin Password:</label> {/* Changed htmlFor to match id */}
               <input
                 type="password"
-                id="password"
+                id="admin-password" // Changed id to be more specific
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Password"
@@ -582,6 +601,12 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         <div style={{ color: '#888', margin: 20 }}>
           Loading word list...
         </div>
+        {/* Silver's visual representation and interaction */}
+        <div className={`silver-presence ${silverAppearance}`}>
+            <p>{silverDialogue}</p>
+            <button onClick={() => handleSilverInteraction('absorb')}>Absorb Emeralds</button>
+            <button onClick={() => handleSilverInteraction('drain')}>Drain Words</button>
+        </div>
       </div>
     );
   }
@@ -596,27 +621,37 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         <button className="switch-mode" onClick={handleSwitchMode} style={{marginBottom: 10}}>
           Admin Mode
         </button>
+        {/* Silver's visual representation and interaction */}
+        <div className={`silver-presence ${silverAppearance}`}>
+            <p>{silverDialogue}</p>
+            <button onClick={() => handleSilverInteraction('absorb')}>Absorb Emeralds</button>
+            <button onClick={() => handleSilverInteraction('drain')}>Drain Words</button>
+        </div>
       </div>
     );
   }
 
-  // Then check for empty word list
-  if (ACTIVE_WORDS.length === 0) {
+  if (ACTIVE_WORDS.length === 0 && !isAdmin) { // Show only if not in admin mode
     return (
       <div className="hangman-game">
         <h2>Hangman</h2>
         <div style={{ color: '#888', margin: 20 }}>
-          No words available. Please add words in admin mode.
+          No words available. Please add words in admin mode or check connection.
         </div>
         <button className="switch-mode" onClick={handleSwitchMode} style={{marginBottom: 10}}>
           Admin Mode
         </button>
+        {/* Silver's visual representation and interaction */}
+        <div className={`silver-presence ${silverAppearance}`}>
+            <p>{silverDialogue}</p>
+            <button onClick={() => handleSilverInteraction('absorb')}>Absorb Emeralds</button>
+            <button onClick={() => handleSilverInteraction('drain')}>Drain Words</button>
+        </div>
       </div>
     );
   }
 
-  // Check for out of bounds index
-  if (!ACTIVE_WORDS[currentIndex]) {
+  if (!ACTIVE_WORDS[currentIndex] && !isAdmin && ACTIVE_WORDS.length > 0) { // Check if current index is valid
     return (
       <div className="hangman-game">
         <h2>Hangman</h2>
@@ -624,22 +659,37 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         <button className="switch-mode" onClick={handleSwitchMode} style={{marginBottom: 10}}>
           Admin Mode
         </button>
+        <button className="next-button" onClick={() => { setCurrentIndex(0); nextWordHandler(); }}>Play Again</button> {/* Added Play Again */}
+        {/* Silver's visual representation and interaction */}
+        <div className={`silver-presence ${silverAppearance}`}>
+            <p>{silverDialogue}</p>
+            <button onClick={() => handleSilverInteraction('absorb')}>Absorb Emeralds</button>
+            <button onClick={() => handleSilverInteraction('drain')}>Drain Words</button>
+        </div>
       </div>
     );
   }
+  
+  // const displayWord = getDisplayWord(); // Already called below, avoid duplication
 
   return (
     <div className="hangman-game">
       <h2>Hangman</h2>
       <button className="switch-mode" onClick={handleSwitchMode} style={{marginBottom: 10}}>
-        Admin Mode
+        {isAdmin ? "Player Mode" : "Admin Mode"} {/* Dynamic button text */}
       </button>
+       {/* Silver's visual representation and interaction */}
+       <div className={`silver-presence ${silverAppearance}`}>
+            <p>{silverDialogue}</p>
+            <button onClick={() => handleSilverInteraction('absorb')} disabled={gameStatus !== 'playing'}>Absorb Emeralds</button>
+            <button onClick={() => handleSilverInteraction('drain')} disabled={gameStatus !== 'playing'}>Drain Words</button>
+        </div>
       <div className="game-container">
         <div className="score-display">Score: {score}</div>
         
         {renderHangman()}
         
-        <div className="word-display">{getDisplayWord()}</div>
+        <div className="word-display">{getDisplayWord()}</div> {/* Call getDisplayWord here */}
         
         {gameStatus === 'won' && (
           <div className="message success">
@@ -702,4 +752,4 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
   );
 };
 
-export default HangmanGame; 
+export default HangmanGame;
