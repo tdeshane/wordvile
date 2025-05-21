@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE = process.env.NODE_ENV === 'development'
   ? 'http://localhost:4000' // Backend port for local development
-  : process.env.REACT_APP_API_BASE || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod';
+  : process.env.REACT_APP_API_URL || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod'; // Changed to REACT_APP_API_URL
 
 export interface SilverState {
   name: string;

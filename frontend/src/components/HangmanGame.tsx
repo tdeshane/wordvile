@@ -24,7 +24,7 @@ const LOCAL_STORAGE_KEY = 'hangman_words';
 // Remove hardcoded password - will verify via backend
 // const ADMIN_PASSWORD = 'BibleGames2025'; 
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod';
 const ADMIN_TOKEN = process.env.REACT_APP_ADMIN_TOKEN || 'changeme';
 
 interface HangmanGameProps {

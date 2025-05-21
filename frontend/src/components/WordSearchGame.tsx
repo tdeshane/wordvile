@@ -25,7 +25,7 @@ const LOCAL_STORAGE_KEY = 'word_search_words';
 // Remove hardcoded password - will verify via backend
 // const ADMIN_PASSWORD = 'BibleGames2025';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod';
 
 interface WordSearchGameProps {
   isAdmin: boolean;
@@ -701,4 +701,4 @@ const WordSearchGame: React.FC<WordSearchGameProps> = ({
   );
 };
 
-export default WordSearchGame; 
+export default WordSearchGame;

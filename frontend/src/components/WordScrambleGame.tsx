@@ -43,7 +43,9 @@ function scrambleWord(word: string): string {
   return scrambled;
 }
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod';
+const API_BASE = process.env.NODE_ENV === 'development'
+  ? 'http://localhost:4000' // Backend port for local development
+  : process.env.REACT_APP_API_URL || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod'; // Changed to REACT_APP_API_URL
 
 interface WordScrambleGameProps {
   isAdmin: boolean;
@@ -588,4 +590,4 @@ const WordScrambleGame: React.FC<WordScrambleGameProps> = ({
   );
 };
 
-export default WordScrambleGame; 
+export default WordScrambleGame;
