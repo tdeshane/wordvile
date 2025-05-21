@@ -3,6 +3,7 @@ import WordScrambleGame from './WordScrambleGame';
 import HangmanGame from './HangmanGame';
 import WordSearchGame from './WordSearchGame';
 import SilverGame from './SilverGame';
+import SilverChallengeContent from './SilverChallengeContent';
 import '../styles/TabsContainer.css';
 
 // Helper to get query param
@@ -10,7 +11,7 @@ function getQueryParam(name: string) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-type Tab = 'wordScramble' | 'hangman' | 'wordSearch' | 'silver';
+type Tab = 'wordScramble' | 'hangman' | 'wordSearch' | 'silver' | 'silverStory';
 
 const TabsContainer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('wordScramble');
@@ -93,6 +94,12 @@ const TabsContainer: React.FC = () => {
         >
           Silver's Challenge
         </button>
+        <button 
+          className={`tab ${activeTab === 'silverStory' ? 'active' : ''}`}
+          onClick={() => changeTab('silverStory')}
+        >
+          Silver's Story
+        </button>
       </div>
 
       <div className="tab-content">
@@ -126,9 +133,22 @@ const TabsContainer: React.FC = () => {
             onAdminModeToggle={handleAdminModeToggle}
           />
         )}
+        {activeTab === 'silver' && (
+          <SilverGame
+            isAdmin={isAdmin} 
+            isPasswordVerified={isPasswordVerified} 
+            adminToken={adminToken}
+            onAdminLogin={handleAdminLogin}
+            onAdminLogout={handleAdminLogout}
+            onAdminModeToggle={handleAdminModeToggle}
+          />
+        )}
+        {activeTab === 'silverStory' && (
+          <SilverChallengeContent />
+        )}
       </div>
     </div>
   );
 };
 
-export default TabsContainer; 
+export default TabsContainer;
