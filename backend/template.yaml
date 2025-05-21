@@ -2,14 +2,32 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Bible Word Game Backend
 
+Parameters:
+  S3BucketNameParameter:
+    Type: String
+    Default: wordvile-words # Default bucket name
+    Description: The S3 bucket name for storing game data.
+  AdminTokenParameter:
+    Type: String
+    Default: "changeme" # IMPORTANT: Override during deployment if not using script's auto-generated token
+    Description: The admin token for protected API endpoints.
+
 Globals:
   Function:
     Environment:
       Variables:
-        S3_BUCKET: bible-word-game-words
+        S3_BUCKET: !Ref S3BucketNameParameter
+        ADMIN_TOKEN: !Ref AdminTokenParameter
+        DATA_DIR: /tmp/data
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+    MemorySize: 512
+    Timeout: 10
+    # 'Policies' is NOT a valid Global for Function, so it's removed from here.
+    # Policies will be applied to individual functions that need them.
 
 Resources:
-  # S3 bucket policy for Lambda access
   S3AccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -20,26 +38,23 @@ Resources:
             Action:
               - s3:GetObject
               - s3:PutObject
+            Resource:
+              - !Sub 'arn:aws:s3:::${S3BucketNameParameter}/*' # Objects in the bucket
+          - Effect: Allow
+            Action:
               - s3:ListBucket
             Resource:
-              - !Sub 'arn:aws:s3:::bible-word-game-words'
-              - !Sub 'arn:aws:s3:::bible-word-game-words/*'
-  ApiFunction:
+              - !Sub 'arn:aws:s3:::${S3BucketNameParameter}' # The bucket itself
+
+  ApiFunction: # This function might be a general purpose one or legacy.
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: index.handler
-      Runtime: nodejs20.x
-      Architectures:
-        - x86_64
-      MemorySize: 512
-      Timeout: 10
-      Policies:
+      # Environment variables are inherited from Globals.
+      Policies: # Explicitly add S3 policy
         - !Ref S3AccessPolicy
-      Environment:
-        Variables:
-          ADMIN_TOKEN: changeme # Set your real token here or in the AWS Console
-          DATA_DIR: /tmp/data
+      # No explicit events defined here in this example, assuming it's invoked differently or events are elsewhere.
 
   ApiGateway:
     Type: AWS::Serverless::Api
@@ -49,7 +64,7 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Admin-Token'"
-        AllowOrigin: "'*'"
+        AllowOrigin: "'*'" # Consider restricting this in production
       Auth:
         DefaultAuthorizer: NONE
       GatewayResponses:
@@ -71,12 +86,8 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: index.handler
-      Runtime: nodejs20.x
-      Policies:
+      Policies: # Needs S3 access
         - !Ref S3AccessPolicy
-      Environment:
-        Variables:
-          DATA_DIR: /tmp/data
       Events:
         GetWords:
           Type: Api
@@ -90,13 +101,8 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: index.handler
-      Runtime: nodejs20.x
-      Policies:
+      Policies: # Needs S3 access
         - !Ref S3AccessPolicy
-      Environment:
-        Variables:
-          DATA_DIR: /tmp/data
-          ADMIN_TOKEN: changeme
       Events:
         PostWords:
           Type: Api
@@ -110,10 +116,7 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: index.handler
-      Runtime: nodejs20.x
-      Environment:
-        Variables:
-          ADMIN_TOKEN: changeme
+      # No S3AccessPolicy needed
       Events:
         VerifyPassword:
           Type: Api
@@ -122,16 +125,12 @@ Resources:
             Path: /verify-admin-password
             Method: POST
 
-  # Add explicit OPTIONS methods for CORS preflight requests
   OptionsForWordsPathFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: index.handler
-      Runtime: nodejs20.x
-      Environment:
-        Variables:
-          DATA_DIR: /tmp/data
+      # No S3AccessPolicy needed for OPTIONS
       Events:
         OptionsForWordsPath:
           Type: Api
@@ -145,10 +144,7 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: index.handler
-      Runtime: nodejs20.x
-      Environment:
-        Variables:
-          ADMIN_TOKEN: changeme
+      # No S3AccessPolicy needed for OPTIONS
       Events:
         OptionsForVerifyPassword:
           Type: Api
@@ -157,7 +153,96 @@ Resources:
             Path: /verify-admin-password
             Method: OPTIONS
 
+  # --- Functions for Silver Routes ---
+
+  GetSilverStateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Policies: # Needs S3 access
+        - !Ref S3AccessPolicy
+      Events:
+        GetSilverState:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /silver/state
+            Method: GET
+
+  OptionsForSilverStateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      # No S3AccessPolicy needed for OPTIONS
+      Events:
+        OptionsSilverState:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /silver/state
+            Method: OPTIONS
+
+  PostSilverAbsorbFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Policies: # Needs S3 access
+        - !Ref S3AccessPolicy
+      Events:
+        PostSilverAbsorb:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /silver/absorb
+            Method: POST
+
+  OptionsForSilverAbsorbFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      # No S3AccessPolicy needed for OPTIONS
+      Events:
+        OptionsSilverAbsorb:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /silver/absorb
+            Method: OPTIONS
+
+  PostSilverDrainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Policies: # Needs S3 access
+        - !Ref S3AccessPolicy
+      Events:
+        PostSilverDrain:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /silver/drain
+            Method: POST
+
+  OptionsForSilverDrainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      # No S3AccessPolicy needed for OPTIONS
+      Events:
+        OptionsSilverDrain:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /silver/drain
+            Method: OPTIONS
+
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod" 
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod"

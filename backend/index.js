@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import serverlessExpress from '@vendia/serverless-express';
 
 dotenv.config();
 
@@ -18,169 +19,36 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'Pr@yer&WordG@me2025!'; // Strong
 const DATA_DIR = process.env.DATA_DIR || (process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp/data' : path.resolve('./data'));
 const DEFAULT_DATA_DIR = path.resolve('./data');
 
-// For Lambda we need a direct handler for OPTIONS requests
-const directLambdaHandler = async (event) => {
-  try {
-    console.log('Lambda direct handler invoked with method:', event.httpMethod);
-    console.log('Event path:', event.path);
-    console.log('Event headers:', JSON.stringify(event.headers || {}));
-    
-    // Special handling for OPTIONS (preflight) requests
-    if (event.httpMethod === 'OPTIONS') {
-      console.log('Handling OPTIONS preflight request for path:', event.path);
-      
-      // Specific handling for verify-admin-password OPTIONS request
-      if (event.path === '/verify-admin-password') {
-        console.log('Handling specific OPTIONS for /verify-admin-password');
-        return {
-          statusCode: 200,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-            'Access-Control-Max-Age': '86400',
-            'Content-Type': 'text/plain',
-            'Content-Length': '0'
-          },
-          body: ''
-        };
-      }
-      
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-          'Access-Control-Max-Age': '86400',
-          'Content-Type': 'application/json',
-          'Content-Length': '0'
-        },
-        body: ''
-      };
-    }
-    
-    // Handle verify-admin-password directly
-    if (event.path === '/verify-admin-password' && event.httpMethod === 'POST') {
-      console.log('Handling direct password verification request');
-      try {
-        const body = JSON.parse(event.body || '{}');
-        const { password } = body;
-        
-        console.log('Received password attempt:', password ? '****' : 'empty');
-        
-        if (password === ADMIN_TOKEN) {
-          console.log('Password verification successful');
-          return {
-            statusCode: 200,
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-              'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              success: true,
-              adminToken: ADMIN_TOKEN
-            })
-          };
-        }
-        
-        console.log('Password verification failed');
-        return {
-          statusCode: 401,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            success: false,
-            error: 'Invalid admin password'
-          })
-        };
-      } catch (error) {
-        console.error('Error processing password verification:', error);
-        return {
-          statusCode: 500,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            success: false,
-            error: 'Server error during verification'
-          })
-        };
-      }
-    }
-    
-    // For other paths, use Express routing through serverless-express
-    console.log('Falling back to Express routing for path:', event.path);
-    return null;
-  } catch (error) {
-    console.error('Unhandled error in directLambdaHandler:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        success: false,
-        error: 'Unexpected server error'
-      })
-    };
-  }
-};
-
 // CORS Configuration for Express
 const corsOptions = {
-  origin: '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    // For now, allow all origins. In production, restrict this to your frontend's domain.
+    // const allowedOrigins = ['https://d2qww79wy1vhmw.cloudfront.net', 'http://localhost:3000'];
+    // if (allowedOrigins.indexOf(origin) === -1) {
+    //   const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    //   return callback(new Error(msg), false);
+    // }
+    return callback(null, true);
+  },
   methods: 'GET,POST,OPTIONS',
   allowedHeaders: ['Content-Type', 'x-admin-token', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token'],
   exposedHeaders: ['Access-Control-Allow-Origin', 'Access-Control-Allow-Methods', 'Access-Control-Allow-Headers'],
   credentials: true,
   maxAge: 86400,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  preflightContinue: false, // Important: Let CORS middleware handle preflight and terminate it.
+  optionsSuccessStatus: 204 // For OPTIONS requests, return 204 No Content.
 };
 
-// Apply CORS middleware
+// Apply CORS middleware early
 app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS requests for all routes if not handled by `cors` middleware
+// This might be redundant if `cors` with `preflightContinue: false` handles it, but can be a fallback.
+app.options('*', cors(corsOptions)); // Ensure OPTIONS requests are handled with CORS headers
+
 app.use(express.json());
-
-// Handle preflight requests
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token');
-  res.header('Access-Control-Max-Age', '86400');
-  res.status(204).end();
-});
-
-// Add a specific handler for /verify-admin-password OPTIONS
-app.options('/verify-admin-password', (req, res) => {
-  console.log('Express handling OPTIONS for /verify-admin-password');
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token');
-  res.header('Access-Control-Max-Age', '86400');
-  res.status(204).end();
-});
-
-// Ensure CORS headers are on all responses
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token');
-  next();
-});
 
 // Create the data directory if it doesn't exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -482,9 +350,9 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   
   // Ensure CORS headers are set
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token');
+  // res.header('Access-Control-Allow-Origin', '*'); // Already handled by cors middleware
+  // res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  // res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token');
   
   res.status(500).json({
     success: false,
@@ -492,106 +360,50 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Combined handler for Lambda
-export const handler = async (event, context) => {
-  console.log('Lambda handler called with method:', event.httpMethod, 'path:', event.path);
-  
-  // First, handle OPTIONS requests directly
-  if (event.httpMethod === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request');
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-        'Access-Control-Max-Age': '86400',
-        'Content-Type': 'text/plain',
-        'Content-Length': '0'
-      },
-      body: ''
-    };
-  }
-  
-  // Handle verify-admin-password directly
-  if (event.path === '/verify-admin-password' && event.httpMethod === 'POST') {
-    console.log('Handling password verification request');
+// Combined handler for Lambda using @vendia/serverless-express
+let serverlessExpressInstance;
+
+async function setup(event, context) {
+  console.log('Lambda handler setup initiated.');
+  console.log('S3_BUCKET:', process.env.S3_BUCKET);
+  console.log('ADMIN_TOKEN (length):', process.env.ADMIN_TOKEN ? process.env.ADMIN_TOKEN.length : 0);
+
+  // For Lambda, ensure data directory exists in /tmp
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME && !fs.existsSync(DATA_DIR)) {
     try {
-      const body = JSON.parse(event.body || '{}');
-      const { password } = body;
-      
-      console.log('Received password attempt:', password ? '(redacted)' : 'none');
-      
-      if (password === ADMIN_TOKEN) {
-        console.log('Password verification successful');
-        return {
-          statusCode: 200,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            success: true,
-            adminToken: ADMIN_TOKEN
-          })
-        };
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      console.log(`Created DATA_DIR at ${DATA_DIR} in Lambda environment.`);
+      const packagedDataDir = path.resolve('./data'); 
+      if (fs.existsSync(packagedDataDir)) {
+        fs.readdirSync(packagedDataDir).forEach(file => {
+          const srcPath = path.join(packagedDataDir, file);
+          const destPath = path.join(DATA_DIR, file);
+          if (!fs.existsSync(destPath)) { // Only copy if it doesn't exist, S3 is primary
+            fs.copyFileSync(srcPath, destPath);
+            console.log(`Copied ${srcPath} to ${destPath} as initial default.`);
+          } else {
+            console.log(`File ${destPath} already exists in /tmp/data, not overwriting from package.`);
+          }
+        });
+      } else {
+        console.log(`Packaged data directory ${packagedDataDir} not found.`);
       }
-      
-      console.log('Password verification failed');
-      return {
-        statusCode: 401,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Invalid admin password'
-        })
-      };
-    } catch (error) {
-      console.error('Error in password verification:', error);
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Server error during verification'
-        })
-      };
+    } catch (e) {
+      console.error('Error creating or populating DATA_DIR in Lambda /tmp:', e);
     }
   }
-  
-  // Otherwise, use serverless-express for API routes
-  try {
-    const serverlessExpress = (await import('@vendia/serverless-express')).default;
-    const serverlessHandler = serverlessExpress({ app });
-    return serverlessHandler(event, context);
-  } catch (error) {
-    console.error('Error in serverless-express handling:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Admin-Token',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        success: false,
-        error: 'Server error'
-      })
-    };
+  serverlessExpressInstance = serverlessExpress({ app });
+  return serverlessExpressInstance(event, context);
+}
+
+export const handler = async (event, context) => {
+  console.log('Lambda handler called with method:', event.httpMethod, 'path:', event.path);
+  // console.log('Event Headers:', JSON.stringify(event.headers)); // Already logged in setup if needed
+
+  if (serverlessExpressInstance) {
+    return serverlessExpressInstance(event, context);
   }
+  return setup(event, context);
 };
 
 // Local development server

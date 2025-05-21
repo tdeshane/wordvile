@@ -75,11 +75,7 @@ echo -e "\n${YELLOW}=== Configuring S3 bucket ===${NC}"
 echo "Disabling Block Public Access..."
 aws s3api put-public-access-block \
   --bucket "$BUCKET" \
-  --public-access-block-configuration '
-    BlockPublicAcls=false,
-    IgnorePublicAcls=false,
-    BlockPublicPolicy=false,
-    RestrictPublicBuckets=false'
+  --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
 
 # Enable static website hosting
 echo "Enabling static website hosting..."
@@ -89,7 +85,7 @@ aws s3 website "s3://$BUCKET/" \
 
 # Set bucket policy
 echo "Setting bucket policy..."
-POLICY=$(cat <<-EOF
+read -r -d '' POLICY <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -109,7 +105,6 @@ POLICY=$(cat <<-EOF
   ]
 }
 EOF
-)
 
 echo "$POLICY" > /tmp/bucket-policy.json
 aws s3api put-bucket-policy --bucket "$BUCKET" --policy file:///tmp/bucket-policy.json
@@ -137,7 +132,7 @@ else
   # Create CloudFront distribution
   echo -e "\n${YELLOW}=== Creating CloudFront distribution ===${NC}"
   
-  CLOUDFRONT_CONFIG=$(cat <<-EOF
+  CLOUDFRONT_CONFIG=$(cat <<-END_CLOUDFRONT_CONFIG
   {
     "CallerReference": "wordvile-$(date +%s)",
     "Comment": "WordVile Frontend",
@@ -199,8 +194,8 @@ else
     "HttpVersion": "http2",
     "IsIPV6Enabled": true
   }
-  EOF
-  )
+END_CLOUDFRONT_CONFIG
+)
   
   echo "$CLOUDFRONT_CONFIG" > /tmp/cloudfront-config.json
   

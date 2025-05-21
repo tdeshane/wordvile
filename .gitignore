@@ -14,3 +14,15 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# AWS SAM & CloudFormation artifacts
+backend/.aws-sam/
+*.bak
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary files for scripts
+/tmp/bucket-policy.json
+/tmp/cloudfront-config.json
