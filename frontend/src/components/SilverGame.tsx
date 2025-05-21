@@ -39,15 +39,14 @@ const SilverGame: React.FC = () => {
 
   const fetchWords = async () => {
     try {
-      const response = await axios.get('/words/silver');
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const response = await axios.get(`${apiUrl}/words/silver`);
       setGameData(response.data);
       setWords(response.data.words);
     } catch (error) {
       console.error('Error fetching words:', error);
     }
   };
-
-
 
   const startGameTimer = () => {
     const timer = setInterval(() => {
