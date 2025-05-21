@@ -105,7 +105,7 @@ const TabsContainer: React.FC = () => {
       <div className="tab-content">
         {activeTab === 'wordScramble' && (
           <WordScrambleGame 
-            isAdmin={isAdmin} 
+            isAdmin={isAdmin}
             isPasswordVerified={isPasswordVerified} 
             adminToken={adminToken}
             onAdminLogin={handleAdminLogin}
@@ -115,7 +115,7 @@ const TabsContainer: React.FC = () => {
         )}
         {activeTab === 'hangman' && (
           <HangmanGame 
-            isAdmin={isAdmin} 
+            isAdmin={isAdmin}
             isPasswordVerified={isPasswordVerified} 
             adminToken={adminToken}
             onAdminLogin={handleAdminLogin}
@@ -125,7 +125,7 @@ const TabsContainer: React.FC = () => {
         )}
         {activeTab === 'wordSearch' && (
           <WordSearchGame 
-            isAdmin={isAdmin} 
+            isAdmin={isAdmin}
             isPasswordVerified={isPasswordVerified} 
             adminToken={adminToken}
             onAdminLogin={handleAdminLogin}
@@ -134,16 +134,9 @@ const TabsContainer: React.FC = () => {
           />
         )}
         {activeTab === 'silver' && (
-          <SilverGame
-            isAdmin={isAdmin} 
-            isPasswordVerified={isPasswordVerified} 
-            adminToken={adminToken}
-            onAdminLogin={handleAdminLogin}
-            onAdminLogout={handleAdminLogout}
-            onAdminModeToggle={handleAdminModeToggle}
-          />
+          <SilverGame />
         )}
-        {activeTab === 'silverStory' && (
+        {activeTab === 'silverStory' && ( 
           <SilverChallengeContent />
         )}
       </div>
