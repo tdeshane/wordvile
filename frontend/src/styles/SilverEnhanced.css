@@ -1,0 +1,489 @@
+/* Enhanced T-Shaped Silver Character with Supernatural Powers */
+.zombie-silver-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9;
+  transition: all 0.5s ease;
+}
+
+.zombie-silver.t-shaped-form {
+  width: 300px;
+  height: 400px;
+  position: relative;
+  transform-origin: center bottom;
+  animation: silverFloat 3s ease-in-out infinite;
+}
+
+@keyframes silverFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-15px) scale(1.02); }
+}
+
+/* Power Generator at Bottom */
+.power-generator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 60px;
+  background: linear-gradient(to top, #1a0033 0%, #330066 50%, #4d0099 100%);
+  border-radius: 10px;
+  box-shadow: 0 0 30px rgba(77, 0, 153, 0.8);
+  animation: powerPulse 2s infinite alternate;
+}
+
+@keyframes powerPulse {
+  0% { box-shadow: 0 0 30px rgba(77, 0, 153, 0.8); }
+  100% { box-shadow: 0 0 50px rgba(77, 0, 153, 1), 0 0 80px rgba(153, 50, 255, 0.6); }
+}
+
+.generator-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  background: radial-gradient(circle, #ff00ff 0%, #8800ff 100%);
+  border-radius: 50%;
+  animation: coreRotation 1s linear infinite;
+}
+
+@keyframes coreRotation {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.generator-energy-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(90deg, transparent 45%, #ff00ff 50%, transparent 55%),
+    linear-gradient(0deg, transparent 45%, #ff00ff 50%, transparent 55%);
+  animation: energyFlow 0.5s linear infinite;
+}
+
+@keyframes energyFlow {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+/* T-Shaped Rocky Body with Armor */
+.t-shaped-body {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 200px;
+  background: linear-gradient(to top, #2d1b3d 0%, #4b0082 50%, #6a0dad 100%);
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(106, 13, 173, 0.6);
+}
+
+.body-armor {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  right: -5px;
+  bottom: 0;
+  background: 
+    linear-gradient(45deg, transparent 48%, #888888 50%, transparent 52%),
+    linear-gradient(-45deg, transparent 48%, #888888 50%, transparent 52%);
+  border-radius: 8px;
+  opacity: 0.7;
+}
+
+.rocky-texture {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(3px 3px at 10px 10px, #333 50%, transparent 51%),
+    radial-gradient(2px 2px at 30px 40px, #444 50%, transparent 51%),
+    radial-gradient(4px 4px at 50px 80px, #222 50%, transparent 51%);
+  border-radius: 8px;
+}
+
+/* Horizontal T-Bar with 3 Heads */
+.t-bar {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Individual Heads */
+.silver-head {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  background: linear-gradient(135deg, #4b0082 0%, #6a0dad 50%, #8b00ff 100%);
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: 0 0 15px rgba(106, 13, 173, 0.8);
+  animation: headFloat 2s ease-in-out infinite;
+}
+
+.silver-head.main-head {
+  transform: scale(1.2);
+  z-index: 10;
+}
+
+@keyframes headFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.silver-head.main-head {
+  animation: mainHeadFloat 2s ease-in-out infinite;
+}
+
+@keyframes mainHeadFloat {
+  0%, 100% { transform: scale(1.2) translateY(0); }
+  50% { transform: scale(1.2) translateY(-8px); }
+}
+
+/* Head Armor */
+.head-armor {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: 5px;
+  border: 3px solid #888888;
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(45deg, transparent 48%, rgba(136, 136, 136, 0.3) 50%, transparent 52%);
+}
+
+.head-armor.main-armor {
+  border-color: #gold;
+  background: linear-gradient(45deg, transparent 48%, rgba(255, 215, 0, 0.3) 50%, transparent 52%);
+}
+
+/* Laser Eyes */
+.laser-eyes {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.laser-eye {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #ff0000;
+  box-shadow: 0 0 10px #ff0000;
+  animation: laserGlow 1s infinite alternate;
+}
+
+.laser-eye.primary {
+  background: #ff00ff;
+  box-shadow: 0 0 15px #ff00ff;
+  animation: primaryLaserGlow 0.8s infinite alternate;
+}
+
+@keyframes laserGlow {
+  0% { box-shadow: 0 0 10px #ff0000; }
+  100% { box-shadow: 0 0 20px #ff0000, 0 0 30px #ff4444; }
+}
+
+@keyframes primaryLaserGlow {
+  0% { box-shadow: 0 0 15px #ff00ff; }
+  100% { box-shadow: 0 0 25px #ff00ff, 0 0 40px #ff44ff; }
+}
+
+/* Laser Active State */
+.zombie-silver.t-shaped-form[data-laser-active="true"] .laser-eye {
+  animation: laserFiring 0.2s infinite;
+}
+
+@keyframes laserFiring {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.5); background: #ffffff; }
+}
+
+/* Spinning Bone Saw Parts */
+.bone-saw-parts {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+}
+
+.bone-part.spinning-saw {
+  position: absolute;
+  width: 20px;
+  height: 4px;
+  background: linear-gradient(90deg, #ffffff 0%, #cccccc 50%, #888888 100%);
+  border-radius: 2px;
+  animation: boneSawSpin 0.1s linear infinite;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+.bone-part.part1 {
+  top: 5px;
+  left: 5px;
+  transform-origin: 10px 2px;
+}
+
+.bone-part.part2 {
+  bottom: 5px;
+  right: 5px;
+  transform-origin: 10px 2px;
+  animation-direction: reverse;
+}
+
+@keyframes boneSawSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Cannons */
+.cannon {
+  position: absolute;
+  width: 25px;
+  height: 8px;
+  background: linear-gradient(90deg, #333333 0%, #666666 100%);
+  border-radius: 4px;
+  top: 40px;
+}
+
+.left-cannon {
+  left: -30px;
+}
+
+.right-cannon {
+  right: -30px;
+}
+
+.cannon::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background: #ff4444;
+  border-radius: 50%;
+  opacity: 0;
+  animation: cannonReady 2s infinite;
+}
+
+@keyframes cannonReady {
+  0%, 90% { opacity: 0; }
+  95%, 100% { opacity: 1; }
+}
+
+/* Cannon Active State */
+.zombie-silver.t-shaped-form[data-cannons-active="true"] .cannon::after {
+  animation: cannonFiring 0.3s infinite;
+}
+
+@keyframes cannonFiring {
+  0% { opacity: 1; transform: translateY(-50%) scale(1); }
+  100% { opacity: 0; transform: translateY(-50%) scale(3); }
+}
+
+/* Teleportation Aura */
+.teleport-aura {
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.3) 0%, transparent 70%);
+  opacity: 0;
+  animation: teleportReady 3s infinite;
+}
+
+@keyframes teleportReady {
+  0%, 85% { opacity: 0; transform: scale(1); }
+  90%, 95% { opacity: 0.8; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* Teleporting State */
+.zombie-silver.t-shaped-form[data-teleporting="true"] {
+  animation: teleportEffect 1s ease-in-out;
+}
+
+@keyframes teleportEffect {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.2; transform: scale(0.5) rotate(180deg); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Sheikers (Helper Entities) */
+.sheikers {
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  right: -50px;
+  bottom: -50px;
+  pointer-events: none;
+}
+
+.sheiker {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, rgba(75, 0, 130, 0.8) 0%, rgba(106, 13, 173, 0.4) 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(75, 0, 130, 0.6);
+  opacity: 0;
+  animation: sheikerFloat 4s infinite ease-in-out;
+}
+
+.sheiker1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.sheiker2 {
+  top: 30%;
+  right: 15%;
+  animation-delay: 1.3s;
+}
+
+.sheiker3 {
+  bottom: 40%;
+  left: 20%;
+  animation-delay: 2.6s;
+}
+
+@keyframes sheikerFloat {
+  0%, 100% { opacity: 0; transform: translateY(0) scale(0.8); }
+  20%, 80% { opacity: 1; transform: translateY(-20px) scale(1); }
+  50% { transform: translateY(-40px) scale(1.2); }
+}
+
+/* Sheikers Active State */
+.zombie-silver.t-shaped-form[data-sheikers-active="true"] .sheiker {
+  animation: sheikerActive 1s infinite;
+}
+
+@keyframes sheikerActive {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+/* Shadowy Aura */
+.shadowy-aura {
+  position: absolute;
+  top: -30px;
+  left: -30px;
+  right: -30px;
+  bottom: -30px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.4) 0%, rgba(75, 0, 130, 0.2) 50%, transparent 80%);
+  border-radius: 50%;
+  animation: shadowPulse 4s infinite alternate;
+  z-index: -1;
+}
+
+@keyframes shadowPulse {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.3); opacity: 0.7; }
+}
+
+/* Potion Effects */
+.potion-effects {
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  pointer-events: none;
+}
+
+.slowness-potion-aura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, rgba(128, 0, 128, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  animation: slownessReady 5s infinite;
+}
+
+@keyframes slownessReady {
+  0%, 90% { opacity: 0; }
+  95%, 100% { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* Slowness Active State */
+.zombie-silver.t-shaped-form[data-slowness-active="true"] .slowness-potion-aura {
+  animation: slownessActive 2s infinite;
+}
+
+@keyframes slownessActive {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.5); }
+}
+
+/* State-based styling */
+.zombie-silver.t-shaped-form[data-state="attacking"] {
+  animation: attackMode 0.5s ease-in-out infinite;
+}
+
+@keyframes attackMode {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.zombie-silver.t-shaped-form[data-state="charging"] {
+  animation: chargingMode 1s ease-in-out infinite;
+}
+
+@keyframes chargingMode {
+  0%, 100% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% { 
+    transform: scale(1.05);
+    filter: brightness(1.5);
+  }
+}
+
+/* Eye tracking compatibility */
+.zombie-eyes {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 20px;
+  z-index: 20;
+}
+
+.gaze-point {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #ff00ff;
+  border-radius: 50%;
+  box-shadow: 0 0 5px #ff00ff;
+}

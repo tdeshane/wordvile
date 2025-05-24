@@ -1,0 +1,440 @@
+import * as faceapi from 'face-api.js';
+
+interface EyeTrackingCallback {
+  onEyeContact: (isLookingAt: boolean) => void;
+  onInitialized?: () => void;
+  onError?: (error: any) => void;
+  onDetection?: (detections: faceapi.WithFaceLandmarks<{ detection: faceapi.FaceDetection }>[]) => void;
+}
+
+interface EyeTrackerOptions {
+  debug?: boolean;
+  videoSize?: {
+    width: number;
+    height: number;
+  };
+  threshold?: number;
+}
+
+class EyeTracker {
+  private video: HTMLVideoElement | null = null;
+  private isInitialized: boolean = false;
+  private isTracking: boolean = false;
+  private trackingInterval: number | null = null;
+  private callback: EyeTrackingCallback | null = null;
+  private targetElement: HTMLElement | null = null;
+  private debugMode: boolean = false;
+  private canvas: HTMLCanvasElement | null = null;
+  private lastDetections: faceapi.WithFaceLandmarks<{ detection: faceapi.FaceDetection }>[] = [];
+  private threshold: number = 100; // Default threshold for eye contact
+
+  async initialize(callback: EyeTrackingCallback, options: EyeTrackerOptions = {}) {
+    this.callback = callback;
+    this.debugMode = options.debug || false;
+    this.threshold = options.threshold || 100; // Use custom threshold or default to 100
+    
+    try {
+      console.log('Starting EyeTracker initialization...');
+      console.log('Loading face-api.js models from /models...');
+      
+      // Load models with detailed error reporting
+      const modelPromises = [
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+      ];
+      
+      const modelResults = await Promise.allSettled(modelPromises);
+      
+      // Check if models loaded successfully
+      modelResults.forEach((result, index) => {
+        const modelName = index === 0 ? 'tinyFaceDetector' : 'faceLandmark68Net';
+        if (result.status === 'fulfilled') {
+          console.log(`✓ ${modelName} model loaded successfully`);
+        } else {
+          console.error(`✗ Failed to load ${modelName} model:`, result.reason);
+          throw new Error(`Failed to load ${modelName} model: ${result.reason}`);
+        }
+      });
+      
+      // Verify models are loaded
+      if (!faceapi.nets.tinyFaceDetector.isLoaded) {
+        throw new Error('TinyFaceDetector model is not loaded');
+      }
+      if (!faceapi.nets.faceLandmark68Net.isLoaded) {
+        throw new Error('FaceLandmark68Net model is not loaded');
+      }
+      
+      console.log('All models loaded successfully, initializing camera...');
+      
+      // Check if camera is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera access is not supported in this browser');
+      }
+      
+      // Request camera permission first
+      console.log('Requesting camera permission...');
+      let stream: MediaStream;
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: options.videoSize?.width || 300, 
+            height: options.videoSize?.height || 200,
+            facingMode: 'user' 
+          }
+        });
+        console.log('✓ Camera permission granted successfully');
+      } catch (permissionError: any) {
+        console.error('✗ Camera permission denied or failed:', permissionError);
+        
+        // Provide specific error messages based on the error
+        let errorMessage = 'Camera access failed';
+        if (permissionError.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+        } else if (permissionError.name === 'NotFoundError') {
+          errorMessage = 'No camera found. Please connect a camera and try again.';
+        } else if (permissionError.name === 'NotReadableError') {
+          errorMessage = 'Camera is being used by another application. Please close other camera apps and try again.';
+        } else if (permissionError.name === 'OverconstrainedError') {
+          errorMessage = 'Camera does not support the required settings.';
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Create video element after successful permission
+      this.video = document.createElement('video');
+      
+      if (this.debugMode) {
+        // Debug mode - make video visible
+        this.video.style.position = 'fixed';
+        this.video.style.bottom = '10px';
+        this.video.style.right = '10px';
+        this.video.style.width = (options.videoSize?.width || 300) + 'px';
+        this.video.style.height = (options.videoSize?.height || 200) + 'px';
+        this.video.style.border = '2px solid red';
+        this.video.style.borderRadius = '8px';
+        this.video.style.zIndex = '10000';
+        
+        // Create canvas for drawing face landmarks in debug mode
+        this.canvas = document.createElement('canvas');
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.bottom = '10px';
+        this.canvas.style.right = '10px';
+        this.canvas.style.width = (options.videoSize?.width || 300) + 'px';
+        this.canvas.style.height = (options.videoSize?.height || 200) + 'px';
+        this.canvas.style.zIndex = '10001';
+        document.body.appendChild(this.canvas);
+      } else {
+        // Normal mode - hidden video
+        this.video.style.position = 'fixed';
+        this.video.style.top = '0';
+        this.video.style.left = '0';
+        this.video.style.width = '1px';
+        this.video.style.height = '1px';
+        this.video.style.opacity = '0.01'; // Nearly invisible but still active
+      }
+      
+      this.video.style.pointerEvents = 'none';
+      document.body.appendChild(this.video);
+      
+      this.video.srcObject = stream;
+      await this.video.play();
+      
+      this.isInitialized = true;
+      
+      if (this.callback?.onInitialized) {
+        this.callback.onInitialized();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize eye tracking:', error);
+      if (this.callback?.onError) {
+        this.callback.onError(error);
+      }
+      return false;
+    }
+  }
+
+  startTracking(targetElement: HTMLElement) {
+    if (!this.isInitialized || !this.video) {
+      console.warn('Eye tracker not initialized. Call initialize() first.');
+      return false;
+    }
+    
+    this.targetElement = targetElement;
+    this.isTracking = true;
+    
+    // Start tracking loop
+    this.trackingInterval = window.setInterval(() => {
+      this.detectEyeContact();
+    }, 200); // Check 5 times per second
+    
+    return true;
+  }
+
+  stopTracking() {
+    this.isTracking = false;
+    if (this.trackingInterval) {
+      clearInterval(this.trackingInterval);
+      this.trackingInterval = null;
+    }
+    this.targetElement = null;
+  }
+
+  private async detectEyeContact() {
+    if (!this.isTracking || !this.video || !this.targetElement) return;
+    
+    try {
+      // Check if video is ready
+      if (this.video.readyState < 2) {
+        if (this.debugMode) console.log('Video not ready for face detection');
+        return;
+      }
+      
+      // Debug log every 10th detection attempt
+      if (this.debugMode && Math.random() < 0.1) {
+        console.log('Attempting face detection...');
+      }
+      
+      // Detect face
+      const detections = await faceapi.detectAllFaces(
+        this.video, 
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks();
+      
+      // Debug logging for detection results
+      if (this.debugMode && detections.length !== this.lastDetections.length) {
+        console.log(`Face detection results: ${detections.length} faces detected`);
+        if (detections.length > 0) {
+          console.log('Detection details:', detections[0]);
+        }
+      }
+      
+      // Store detections for debugging and callback
+      this.lastDetections = detections;
+      
+      // Call detection callback with the results
+      if (this.callback?.onDetection) {
+        this.callback.onDetection(detections);
+      }
+      
+      // Draw face landmarks in debug mode
+      if (this.debugMode && this.canvas) {
+        this.drawDebugCanvas(detections);
+      }
+      
+      if (detections.length === 0) {
+        // No face detected
+        this.callback?.onEyeContact(false);
+        return;
+      }
+      
+      // Get bounding box of target (Silver's eyes)
+      const targetRect = this.targetElement.getBoundingClientRect();
+      const targetCenter = {
+        x: targetRect.left + targetRect.width / 2,
+        y: targetRect.top + targetRect.height / 2
+      };
+      
+      // For each detected face
+      for (const detection of detections) {
+        const landmarks = detection.landmarks;
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        
+        // Calculate eye direction
+        const leftEyeCenter = this.calculateCenter(leftEye);
+        const rightEyeCenter = this.calculateCenter(rightEye);
+        
+        // Calculate gaze direction (simplified)
+        const gazePoint = {
+          x: (leftEyeCenter.x + rightEyeCenter.x) / 2,
+          y: (leftEyeCenter.y + rightEyeCenter.y) / 2
+        };
+        
+        // Check if gaze is directed at target (Silver's eyes)
+        // Using a simple distance-based approach
+        const distance = Math.sqrt(
+          Math.pow(gazePoint.x - targetCenter.x, 2) + 
+          Math.pow(gazePoint.y - targetCenter.y, 2)
+        );
+        
+        // If distance is less than threshold, user is looking at Silver's eyes
+        const isLookingAt = distance < this.threshold;
+        
+        this.callback?.onEyeContact(isLookingAt);
+        return;
+      }
+      
+      // Default: Not looking
+      this.callback?.onEyeContact(false);
+      
+    } catch (error) {
+      console.error('Error in eye tracking:', error);
+      this.callback?.onEyeContact(false);
+    }
+  }
+
+  private drawDebugCanvas(detections: faceapi.WithFaceLandmarks<{ detection: faceapi.FaceDetection }>[]) {
+    if (!this.canvas || !this.video) return;
+
+    // Clear the canvas
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas dimensions to match video
+    const displaySize = { 
+      width: this.video.clientWidth, 
+      height: this.video.clientHeight 
+    };
+    faceapi.matchDimensions(this.canvas, displaySize);
+    
+    // Draw detections
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    if (detections.length > 0) {
+      // Resize detections to match display size
+      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      
+      // Draw face landmarks
+      resizedDetections.forEach(detection => {
+        // Draw face detection box
+        faceapi.draw.drawDetections(this.canvas as HTMLCanvasElement, [detection]);
+        
+        // Draw face landmarks
+        faceapi.draw.drawFaceLandmarks(this.canvas as HTMLCanvasElement, [detection]);
+        
+        // Draw eye points with different color
+        const landmarks = detection.landmarks;
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        
+        ctx.fillStyle = '#00ff00';  // Green for eyes
+        ctx.strokeStyle = '#00ff00';
+        
+        // Draw eye points
+        leftEye.forEach(point => {
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+        
+        rightEye.forEach(point => {
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+
+        // Draw eye centers
+        const leftEyeCenter = this.calculateCenter(leftEye);
+        const rightEyeCenter = this.calculateCenter(rightEye);
+        
+        ctx.fillStyle = '#ff0000';  // Red for eye centers
+        ctx.beginPath();
+        ctx.arc(leftEyeCenter.x, leftEyeCenter.y, 4, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(rightEyeCenter.x, rightEyeCenter.y, 4, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw gaze line to target
+        const gazePoint = {
+          x: (leftEyeCenter.x + rightEyeCenter.x) / 2,
+          y: (leftEyeCenter.y + rightEyeCenter.y) / 2
+        };
+        
+        if (this.targetElement && this.canvas) {
+          // Get target position relative to canvas
+          const targetRect = this.targetElement.getBoundingClientRect();
+          const canvasRect = this.canvas.getBoundingClientRect();
+          
+          const targetCenter = {
+            x: targetRect.left - canvasRect.left + targetRect.width / 2,
+            y: targetRect.top - canvasRect.top + targetRect.height / 2
+          };
+          
+          // Draw line from gaze point to target
+          ctx.strokeStyle = '#ffff00';  // Yellow for gaze line
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(gazePoint.x, gazePoint.y);
+          ctx.lineTo(targetCenter.x, targetCenter.y);
+          ctx.stroke();
+          
+          // Draw distance info
+          const distance = Math.sqrt(
+            Math.pow(gazePoint.x - targetCenter.x, 2) + 
+            Math.pow(gazePoint.y - targetCenter.y, 2)
+          );
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '12px Arial';
+          ctx.fillText(`Distance: ${distance.toFixed(0)}px`, 10, 20);
+          ctx.fillText(`Threshold: ${this.threshold}px`, 10, 40);
+        }
+      });
+    }
+  }
+  
+  private calculateCenter(points: faceapi.Point[]) {
+    const sum = points.reduce(
+      (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), 
+      { x: 0, y: 0 }
+    );
+    
+    return {
+      x: sum.x / points.length,
+      y: sum.y / points.length
+    };
+  }
+  
+  cleanup() {
+    this.stopTracking();
+    
+    if (this.video) {
+      // Stop all video tracks
+      const stream = this.video.srcObject as MediaStream;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Remove video element
+      this.video.remove();
+      this.video = null;
+    }
+    
+    // Remove canvas if in debug mode
+    if (this.debugMode && this.canvas) {
+      this.canvas.remove();
+      this.canvas = null;
+    }
+    
+    this.isInitialized = false;
+    this.callback = null;
+    this.lastDetections = [];
+  }
+
+  // Methods for adjusting tracking parameters
+  setThreshold(value: number) {
+    this.threshold = value;
+  }
+
+  getThreshold(): number {
+    return this.threshold;
+  }
+
+  isDebugMode(): boolean {
+    return this.debugMode;
+  }
+  
+  // Get the last detections (for debugging)
+  getLastDetections() {
+    return this.lastDetections;
+  }
+}
+
+const eyeTrackerInstance = new EyeTracker();
+export default eyeTrackerInstance;

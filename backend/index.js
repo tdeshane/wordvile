@@ -188,14 +188,40 @@ async function getSilverState() {
     const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: s3Key });
     const response = await s3Client.send(command);
     const dataString = await response.Body.transformToString();
-    return JSON.parse(dataString);
+    const state = JSON.parse(dataString);
+    // Ensure all new fields have default values if not present
+    state.health = state.health === undefined ? 100 : state.health;
+    state.maxHealth = state.maxHealth === undefined ? 100 : state.maxHealth;
+    state.stamina = state.stamina === undefined ? 100 : state.stamina;
+    state.maxStamina = state.maxStamina === undefined ? 100 : state.maxStamina;
+    state.food = state.food === undefined ? 100 : state.food;
+    state.maxFood = state.maxFood === undefined ? 100 : state.maxFood;
+    state.oxygen = state.oxygen === undefined ? 100 : state.oxygen;
+    state.maxOxygen = state.maxOxygen === undefined ? 100 : state.maxOxygen;
+    state.temperature = state.temperature === undefined ? 37 : state.temperature;
+    state.creativity = state.creativity === undefined ? 50 : state.creativity;
+    state.imagination = state.imagination === undefined ? 50 : state.imagination;
+    return state;
   } catch (s3Error) {
     console.log(`Error getting Silver state from S3: ${s3Error.message}. Trying local fallback.`);
     const localFilePath = path.join(DEFAULT_DATA_DIR, s3Key);
     if (fs.existsSync(localFilePath)) {
       console.log(`Using default Silver state data from ${localFilePath}`);
       const fileData = fs.readFileSync(localFilePath, 'utf8');
-      return JSON.parse(fileData);
+      const state = JSON.parse(fileData);
+      // Ensure all new fields have default values if not present
+      state.health = state.health === undefined ? 100 : state.health;
+      state.maxHealth = state.maxHealth === undefined ? 100 : state.maxHealth;
+      state.stamina = state.stamina === undefined ? 100 : state.stamina;
+      state.maxStamina = state.maxStamina === undefined ? 100 : state.maxStamina;
+      state.food = state.food === undefined ? 100 : state.food;
+      state.maxFood = state.maxFood === undefined ? 100 : state.maxFood;
+      state.oxygen = state.oxygen === undefined ? 100 : state.oxygen;
+      state.maxOxygen = state.maxOxygen === undefined ? 100 : state.maxOxygen;
+      state.temperature = state.temperature === undefined ? 37 : state.temperature;
+      state.creativity = state.creativity === undefined ? 50 : state.creativity;
+      state.imagination = state.imagination === undefined ? 50 : state.imagination;
+      return state;
     } else {
       throw new Error('Silver state configuration not found in S3 or locally.');
     }
@@ -233,6 +259,85 @@ async function saveSilverState(state) {
   }
 }
 
+// Helper function to get The Sheiker state from S3 or local file
+async function getTheSheikerState() {
+  const s3Key = 'thesheiker.json';
+  try {
+    console.log(`Getting The Sheiker state from S3 bucket ${S3_BUCKET}, key ${s3Key}`);
+    const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: s3Key });
+    const response = await s3Client.send(command);
+    const dataString = await response.Body.transformToString();
+    const state = JSON.parse(dataString);
+    // Ensure all new fields have default values if not present
+    state.health = state.health === undefined ? 100 : state.health;
+    state.maxHealth = state.maxHealth === undefined ? 100 : state.maxHealth;
+    state.stamina = state.stamina === undefined ? 100 : state.stamina;
+    state.maxStamina = state.maxStamina === undefined ? 100 : state.maxStamina;
+    state.food = state.food === undefined ? 100 : state.food;
+    state.maxFood = state.maxFood === undefined ? 100 : state.maxFood;
+    state.oxygen = state.oxygen === undefined ? 100 : state.oxygen;
+    state.maxOxygen = state.maxOxygen === undefined ? 100 : state.maxOxygen;
+    state.temperature = state.temperature === undefined ? 37 : state.temperature;
+    state.creativity = state.creativity === undefined ? 50 : state.creativity;
+    state.imagination = state.imagination === undefined ? 50 : state.imagination;
+    return state;
+  } catch (s3Error) {
+    console.log(`Error getting The Sheiker state from S3: ${s3Error.message}. Trying local fallback.`);
+    const localFilePath = path.join(DEFAULT_DATA_DIR, s3Key);
+    if (fs.existsSync(localFilePath)) {
+      console.log(`Using default The Sheiker state data from ${localFilePath}`);
+      const fileData = fs.readFileSync(localFilePath, 'utf8');
+      const state = JSON.parse(fileData);
+      // Ensure all new fields have default values if not present
+      state.health = state.health === undefined ? 100 : state.health;
+      state.maxHealth = state.maxHealth === undefined ? 100 : state.maxHealth;
+      state.stamina = state.stamina === undefined ? 100 : state.stamina;
+      state.maxStamina = state.maxStamina === undefined ? 100 : state.maxStamina;
+      state.food = state.food === undefined ? 100 : state.food;
+      state.maxFood = state.maxFood === undefined ? 100 : state.maxFood;
+      state.oxygen = state.oxygen === undefined ? 100 : state.oxygen;
+      state.maxOxygen = state.maxOxygen === undefined ? 100 : state.maxOxygen;
+      state.temperature = state.temperature === undefined ? 37 : state.temperature;
+      state.creativity = state.creativity === undefined ? 50 : state.creativity;
+      state.imagination = state.imagination === undefined ? 50 : state.imagination;
+      return state;
+    } else {
+      throw new Error('The Sheiker state configuration not found in S3 or locally.');
+    }
+  }
+}
+
+// Helper function to save The Sheiker state to S3 and local file
+async function saveTheSheikerState(state) {
+  const s3Key = 'thesheiker.json';
+  const stateString = JSON.stringify(state, null, 2);
+  try {
+    console.log(`Saving The Sheiker state to S3 bucket ${S3_BUCKET}, key ${s3Key}`);
+    const command = new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: s3Key,
+      Body: stateString,
+      ContentType: 'application/json'
+    });
+    await s3Client.send(command);
+    console.log(`Successfully saved The Sheiker state to S3`);
+  } catch (s3Error) {
+    console.error(`Error saving The Sheiker state to S3: ${s3Error.message}`);
+    // Continue to save locally even if S3 fails for now
+  }
+  try {
+    const localFilePath = path.join(DATA_DIR, s3Key);
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(localFilePath, stateString, 'utf8');
+    console.log(`The Sheiker state saved to ${localFilePath}`);
+  } catch (localError) {
+    console.error(`Failed to save The Sheiker state locally: ${localError.message}`);
+    throw new Error('Failed to save The Sheiker state.'); // If local save also fails, then it's a problem
+  }
+}
+
 // GET /silver/state
 app.get('/silver/state', async (req, res) => {
   try {
@@ -248,6 +353,24 @@ app.get('/silver/state', async (req, res) => {
   } catch (error) {
     console.error(`Unexpected error in GET /silver/state: ${error.message}`, error);
     return res.status(500).json({ error: 'Server error processing Silver state request.' });
+  }
+});
+
+// GET /thesheiker/state
+app.get('/thesheiker/state', async (req, res) => {
+  try {
+    console.log(`GET /thesheiker/state request received`);
+    const sheikerStateData = await getTheSheikerState();
+
+    if (!sheikerStateData || typeof sheikerStateData !== 'object') {
+      console.log('thesheiker.json not found, empty, or not a valid JSON object.');
+      return res.status(404).json({ error: 'The Sheiker state configuration not found or invalid.' });
+    }
+    console.log(`Successfully retrieved The Sheiker state data:`, JSON.stringify(sheikerStateData).substring(0,100) + "...");
+    return res.json(sheikerStateData);
+  } catch (error) {
+    console.error(`Unexpected error in GET /thesheiker/state: ${error.message}`, error);
+    return res.status(500).json({ error: 'Server error processing The Sheiker state request.' });
   }
 });
 
@@ -314,6 +437,76 @@ app.post('/silver/drain', async (req, res) => {
   } catch (error) {
     console.error(`Unexpected error in POST /silver/drain: ${error.message}`, error);
     return res.status(500).json({ error: 'Server error processing drain request.' });
+  }
+});
+
+// POST /character/:charName/use-ability
+app.post('/character/:charName/use-ability', async (req, res) => {
+  try {
+    const { charName } = req.params;
+    const { abilityName } = req.body;
+    console.log(`POST /character/${charName}/use-ability request received for ability: ${abilityName}`);
+
+    let currentState;
+    let saveStateFunction;
+    let characterConfig;
+
+    if (charName.toLowerCase() === 'silver') {
+      currentState = await getSilverState();
+      saveStateFunction = saveSilverState;
+      characterConfig = currentState; // Silver's abilities are part of its main state file
+    } else if (charName.toLowerCase() === 'thesheiker') {
+      currentState = await getTheSheikerState();
+      saveStateFunction = saveTheSheikerState;
+      characterConfig = currentState; // The Sheiker's abilities are in its main state file
+    } else {
+      return res.status(404).json({ error: 'Character not found.' });
+    }
+
+    if (!characterConfig || !Array.isArray(characterConfig.abilities)) {
+        return res.status(500).json({ error: `Abilities configuration not found for ${charName}.` });
+    }
+
+    const ability = characterConfig.abilities.find(a => a.name.toLowerCase() === abilityName.toLowerCase());
+
+    if (!ability) {
+      return res.status(400).json({ error: `Ability '${abilityName}' not found for ${charName}.` });
+    }
+
+    if (currentState.power < ability.cost) {
+      return res.status(400).json({ error: 'Not enough power to use this ability.' });
+    }
+
+    currentState.power -= ability.cost;
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      action: `Used ability: ${ability.name}`,
+      cost: ability.cost,
+      powerRemaining: currentState.power
+    };
+    
+    if (!Array.isArray(currentState.log)) {
+        currentState.log = [];
+    }
+    currentState.log.push(logEntry);
+    // Keep log to a reasonable size, e.g., last 20 entries
+    if (currentState.log.length > 20) {
+        currentState.log = currentState.log.slice(currentState.log.length - 20);
+    }
+    
+    // Specific ability effects can be added here if they modify more than just power
+    // For example, for The Sheiker's "Shelbox" or "Teleport", you might set temporary statuses.
+    // For now, we just deduct power and log.
+
+    await saveStateFunction(currentState);
+    return res.json({
+        message: `${ability.name} used successfully!`,
+        newState: currentState 
+    });
+
+  } catch (error) {
+    console.error(`Unexpected error in POST /character/:charName/use-ability: ${error.message}`, error);
+    return res.status(500).json({ error: 'Server error processing ability request.' });
   }
 });
 

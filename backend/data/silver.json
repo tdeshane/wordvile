@@ -128,5 +128,22 @@
       "points": 10,
       "color": "gold"
     }
-  ]
+  ],
+  "power": 100,
+  "abilities": [
+    { "name": "absorb", "cost": 10, "description": "Absorbs energy from the environment." },
+    { "name": "drain", "cost": 15, "description": "Drains energy from a target." }
+  ],
+  "log": [],
+  "health": 100,
+  "maxHealth": 100,
+  "stamina": 100,
+  "maxStamina": 100,
+  "food": 100,
+  "maxFood": 100,
+  "oxygen": 0,
+  "maxOxygen": 0,
+  "temperature": 100,
+  "creativity": 0,
+  "imagination": 0
 }

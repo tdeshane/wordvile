@@ -1,0 +1,197 @@
+/* Zombie Silver Debug Info */
+.zombie-debug-info {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(130, 92, 255, 0.3);
+  font-size: 0.8rem;
+}
+
+.debug-title {
+  font-weight: bold;
+  color: rgba(130, 92, 255, 0.9);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Eye Tracking Debug Panel */
+.eye-tracking-debug {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid rgba(255, 50, 50, 0.7);
+  border-radius: 8px;
+  padding: 10px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  z-index: 10000;
+  width: 250px;
+}
+
+.debug-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.debug-label {
+  color: #aaaaaa;
+}
+
+.debug-value {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.debug-positive {
+  color: #4caf50;
+}
+
+.debug-negative {
+  color: #f44336;
+}
+
+.debug-warning {
+  color: #ff9800;
+}
+
+.debug-button {
+  background: rgba(130, 92, 255, 0.3);
+  border: 1px solid rgba(130, 92, 255, 0.7);
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.8rem;
+}
+
+.debug-button:hover {
+  background: rgba(130, 92, 255, 0.5);
+}
+
+.debug-button.active {
+  background: rgba(255, 50, 50, 0.7);
+  border-color: rgba(255, 50, 50, 0.9);
+}
+
+.debug-toggle {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid rgba(255, 50, 50, 0.7);
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 8px 12px;
+  cursor: pointer;
+  z-index: 10001;
+  font-size: 0.8rem;
+}
+
+/* Slider styles for threshold adjustment */
+.threshold-slider {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.threshold-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.threshold-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 0.8rem;
+}
+
+.slider-value {
+  font-weight: bold;
+  color: #4caf50;
+}
+
+/* Calibration guide styles */
+.zombie-debug-info h3 {
+  font-size: 0.9rem;
+  color: #ff9800;
+  margin: 8px 0 5px;
+}
+
+.zombie-debug-info ol {
+  margin: 0;
+}
+
+.zombie-debug-info li {
+  margin-bottom: 3px;
+}
+
+.debug-slider {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.debug-slider-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.debug-slider-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.debug-slider-value {
+  font-weight: bold;
+  color: #ff9800;
+}
+
+/* Debug controls */
+.debug-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+}
+
+.debug-toggle {
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: 2px solid rgba(255, 0, 0, 0.5);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.debug-toggle:hover {
+  background: rgba(255, 0, 0, 0.3);
+}
+
+.debug-toggle.active {
+  background: rgba(255, 0, 0, 0.5);
+  border-color: rgba(255, 0, 0, 0.8);
+}
+
+/* Face detection visualization styles */
+.face-detection-visualization {
+  border: 2px dashed rgba(255, 255, 0, 0.5);
+  box-shadow: 0 0 8px rgba(255, 255, 0, 0.3);
+}

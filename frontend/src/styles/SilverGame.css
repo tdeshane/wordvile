@@ -3,20 +3,136 @@
   max-width: 800px;
   margin: 2rem auto;
   padding: 2rem;
-  background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+  background: linear-gradient(0deg, #050520 0%, #10103c 100%);
   border-radius: 15px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 0 100px rgba(130, 92, 255, 0.1);
+  position: relative;
+  color: #ffffff;
+  overflow: hidden;
+  /* Ensure proper stacking context for z-index to work correctly */
+  isolation: isolate;
+}
+
+.silver-game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 20%, rgba(130, 92, 255, 0.2) 0%, transparent 50%);
+  pointer-events: none;
+  border-radius: 15px;
+  z-index: 1;
+}
+
+/* Void stars */
+.silver-game-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(1px 1px at 10% 10%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 15% 25%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 25% 15%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 30% 30%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 40% 40%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 50% 15%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 60% 30%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 70% 40%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 80% 15%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 90% 25%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 95% 90%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 85% 75%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 75% 85%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 65% 65%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 55% 90%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 45% 70%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 35% 85%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 25% 60%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 15% 90%, rgba(255, 255, 255, 0.9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 5% 65%, rgba(255, 255, 255, 0.9) 50%, transparent 100%);
+  border-radius: 15px;
+  opacity: 0.6;
+  animation: twinkleStars 7s linear infinite;
+  z-index: 0;
+}
+
+@keyframes twinkleStars {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Void temple nebula effects */
+.void-nebula {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none; /* Ensures clicks go through to elements below */
+  opacity: 0.95; /* Slightly reduced opacity to ensure it doesn't block clicks */
+}
+
+.void-nebula-cloud {
+  position: absolute;
+  background: radial-gradient(ellipse at center, rgba(130, 92, 255, 0.2) 0%, rgba(76, 0, 153, 0.1) 50%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0.6;
+  mix-blend-mode: screen;
+  z-index: 0;
+  animation: nebulaFloat 20s ease-in-out infinite;
+}
+
+.void-nebula-cloud:nth-child(1) {
+  width: 50%;
+  height: 50%;
+  top: 10%;
+  left: 20%;
+  animation-delay: -5s;
+  background: radial-gradient(ellipse at center, rgba(130, 92, 255, 0.2) 0%, rgba(76, 0, 153, 0.1) 50%, transparent 70%);
+}
+
+.void-nebula-cloud:nth-child(2) {
+  width: 60%;
+  height: 60%;
+  top: 30%;
+  left: 50%;
+  animation-delay: -3s;
+  background: radial-gradient(ellipse at center, rgba(92, 130, 255, 0.2) 0%, rgba(0, 76, 153, 0.1) 50%, transparent 70%);
+}
+
+.void-nebula-cloud:nth-child(3) {
+  width: 40%;
+  height: 40%;
+  top: 60%;
+  left: 30%;
+  animation-delay: -7s;
+  background: radial-gradient(ellipse at center, rgba(153, 92, 255, 0.2) 0%, rgba(76, 0, 153, 0.1) 50%, transparent 70%);
+}
+
+@keyframes nebulaFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, 2%) scale(1.05); }
 }
 
 .silver-game-header {
   text-align: center;
   margin-bottom: 2rem;
+  position: relative;
+  z-index: 5; /* Lower than buttons */
 }
 
 .silver-game-header h2 {
-  color: #4a4a4a;
+  color: #ffffff;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-size: 2rem;
 }
 
 .game-stats {
@@ -33,14 +149,16 @@
 }
 
 .stat-label {
-  color: #666;
+  color: #cccccc;
   font-size: 0.9rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .stat-value {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .low-power {
@@ -52,6 +170,11 @@
   grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
   padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  backdrop-filter: blur(2px);
+  position: relative;
+  z-index: 10; /* Increase to be above all other elements */
 }
 
 .word-card {
@@ -62,6 +185,10 @@
   font-size: 1.2rem;
   font-weight: bold;
   text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  position: relative;
+  z-index: 11; /* Higher than game-board */
 }
 
 .word-card:hover {
@@ -74,34 +201,342 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.95);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(20, 20, 20, 0.95));
+  border: 2px solid rgba(255, 255, 255, 0.3);
   padding: 2rem;
-  border-radius: 10px;
+  border-radius: 15px;
   text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  z-index: 200; /* Very high z-index to ensure it's above everything */
 }
 
 .game-over h3 {
-  color: #333;
+  color: #ffffff;
   margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .game-over p {
-  color: #666;
+  color: #cccccc;
   margin-bottom: 1.5rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .game-over button {
   padding: 0.8rem 1.5rem;
-  background: #4a90e2;
-  color: white;
-  border: none;
-  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(2px);
+  position: relative;
+  z-index: 201; /* Even higher than the game-over container */
 }
 
 .game-over button:hover {
-  background: #357abd;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.game-over button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.temple-atmosphere {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  font-size: 0.9rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.game-mode-selector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 15; /* Higher z-index to ensure buttons are clickable */
+}
+
+.game-mode-selector button {
+  padding: 0.8rem 1.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(2px);
+  position: relative;
+  z-index: 15; /* Ensure buttons are above other elements */
+}
+
+.game-mode-selector button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.game-mode-selector button:disabled {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Silver's character attributes display */
+.silver-attributes {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(2px);
+  position: relative;
+  z-index: 5; /* Lower than buttons and game board */
+}
+
+.attributes-title {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  color: #ffffff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.attribute-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.attribute-label {
+  font-size: 0.8rem;
+  color: #cccccc;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.attribute-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.attribute-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.attribute-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.attribute-bar-fill.health {
+  background: linear-gradient(90deg, #ff4444 0%, #ff8888 100%);
+}
+
+.attribute-bar-fill.temperature {
+  background: linear-gradient(90deg, #ff8800 0%, #ffcc00 100%);
+}
+
+.attribute-bar-fill.stamina {
+  background: linear-gradient(90deg, #44ff44 0%, #88ff88 100%);
+}
+
+.attribute-bar-fill.oxygen {
+  background: linear-gradient(90deg, #4444ff 0%, #8888ff 100%);
+}
+
+.attribute-bar-fill.food {
+  background: linear-gradient(90deg, #aa5500 0%, #cc8800 100%);
+}
+
+.attribute-bar-fill.creativity {
+  background: linear-gradient(90deg, #aa44ff 0%, #cc88ff 100%);
+}
+
+.attribute-bar-fill.imagination {
+  background: linear-gradient(90deg, #44ffff 0%, #88ffff 100%);
+}
+
+/* Temple visual elements */
+.temple-pillar {
+  position: absolute;
+  width: 15px;
+  background: linear-gradient(to bottom, 
+    rgba(130, 92, 255, 0.7) 0%, 
+    rgba(76, 0, 153, 0.5) 50%, 
+    rgba(130, 92, 255, 0.7) 100%);
+  border-radius: 4px;
+  z-index: 2;
+  box-shadow: 0 0 15px rgba(130, 92, 255, 0.5);
+  animation: pillarGlow 8s infinite alternate;
+  pointer-events: none; /* Ensures clicks go through to elements below */
+}
+
+.temple-pillar::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: -10px;
+  right: -10px;
+  height: 20px;
+  background: linear-gradient(to bottom, 
+    rgba(130, 92, 255, 0.1) 0%, 
+    rgba(130, 92, 255, 0.5) 100%);
+  border-radius: 50% 50% 0 0;
+}
+
+.temple-pillar::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: -10px;
+  right: -10px;
+  height: 20px;
+  background: linear-gradient(to top, 
+    rgba(130, 92, 255, 0.1) 0%, 
+    rgba(130, 92, 255, 0.5) 100%);
+  border-radius: 0 0 50% 50%;
+}
+
+.temple-pillar-left {
+  left: 40px;
+  top: 10%;
+  height: 80%;
+}
+
+.temple-pillar-right {
+  right: 40px;
+  top: 10%;
+  height: 80%;
+}
+
+/* Additional temple pillars */
+.temple-pillar-small-left {
+  left: 80px;
+  top: 30%;
+  height: 40%;
+  width: 10px;
+  animation-delay: -3s;
+}
+
+.temple-pillar-small-right {
+  right: 80px;
+  top: 30%;
+  height: 40%;
+  width: 10px;
+  animation-delay: -5s;
+}
+
+/* Temple floor */
+.temple-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: linear-gradient(to bottom, 
+    rgba(130, 92, 255, 0.7) 0%, 
+    rgba(76, 0, 153, 0.3) 100%);
+  box-shadow: 0 0 15px rgba(130, 92, 255, 0.7);
+  z-index: 2;
+  pointer-events: none; /* Ensures clicks go through */
+}
+
+/* Temple ceiling */
+.temple-ceiling {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  background: linear-gradient(to top, 
+    rgba(130, 92, 255, 0.7) 0%, 
+    rgba(76, 0, 153, 0.3) 100%);
+  box-shadow: 0 0 15px rgba(130, 92, 255, 0.7);
+  z-index: 2;
+  pointer-events: none; /* Ensures clicks go through */
+}
+
+@keyframes pillarGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(130, 92, 255, 0.5); }
+  50% { box-shadow: 0 0 25px rgba(130, 92, 255, 0.8); }
+}
+
+/* Temple portal effect */
+.temple-portal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, 
+    rgba(130, 92, 255, 0.1) 0%, 
+    rgba(76, 0, 153, 0.05) 50%, 
+    transparent 70%);
+  box-shadow: 0 0 30px rgba(130, 92, 255, 0.3);
+  z-index: 1;
+  animation: portalPulse 8s infinite alternate;
+  pointer-events: none; /* Ensures clicks go through */
+}
+
+@keyframes portalPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+}
+
+/* Loading indicator */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  color: #ffffff;
+  font-style: italic;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.loading::after {
+  content: "";
+  width: 1em;
+  height: 1em;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  margin-left: 0.5rem;
+  animation: loading-spinner 1s infinite linear;
+}
+
+@keyframes loading-spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }

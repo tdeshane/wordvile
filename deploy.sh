@@ -100,116 +100,89 @@ export TMPDIR=/home/toby/tmp
 mkdir -p "$TMPDIR"
 chmod 700 "$TMPDIR"
 
-# Make all scripts executable
-echo -e "\n${YELLOW}=== Setting up scripts ===${NC}"
-chmod +x scripts/*.sh
+echo -e "\n${GREEN}=== Setting up scripts ===${NC}"
+# Determine script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPTS_SUB_DIR="$SCRIPT_DIR/scripts"
 
-# Check if AWS CLI is installed
-if ! command -v aws &> /dev/null; then
-  echo -e "${RED}AWS CLI is not installed. Please install it first.${NC}"
-  echo "Visit: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-  exit 1
+chmod +x "$SCRIPTS_SUB_DIR"/*.sh # Corrected chmod path
+
+# Navigate to the backend directory for backend deployment
+BACKEND_DIR="$SCRIPT_DIR/backend"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
+
+# Ensure environment variables are available to sub-scripts
+export REGION STACK_NAME S3_BUCKET FRONTEND_BUCKET DEPLOY_METHOD SETUP_INFRA
+
+# Step 1: Setup Backend Infrastructure (if --setup-infra is true)
+if [ "$SETUP_INFRA" = true ] && [ "$DEPLOY_BACKEND" = true ]; then
+    echo -e "\n${GREEN}=== Setting up Backend Infrastructure ===${NC}"
+    if [ "$DEPLOY_METHOD" = "sam" ]; then
+        # SAM specific infrastructure setup (e.g., S3 bucket for SAM artifacts if not already handled by sam deploy)
+        # This might involve running a specific script or CloudFormation template
+        echo "Running SAM infrastructure setup..."
+        # Example: aws cloudformation deploy --template-file some-infra-template.yaml --stack-name ${STACK_NAME}-infra --capabilities CAPABILITY_IAM
+        # For now, we assume 'sam deploy' handles bucket creation or it's pre-existing.
+        # The S3_BUCKET for words is created/checked in deploy-backend.sh
+        echo "SAM infrastructure setup for backend S3 bucket ($S3_BUCKET) will be handled by deploy-backend.sh or assumed pre-existing."
+    elif [ "$DEPLOY_METHOD" = "serverless" ]; then
+        echo "Serverless Framework infrastructure setup for backend..."
+        # Serverless might handle its own S3 resources or require specific commands.
+        # cd "$BACKEND_DIR"
+        # serverless deploy --stage dev # Example
+        # cd "$SCRIPT_DIR"
+        echo "Serverless infrastructure setup for backend S3 bucket ($S3_BUCKET) will be handled by deploy-backend.sh or assumed pre-existing."
+    else
+        echo -e "${RED}Unsupported backend deployment method: $DEPLOY_METHOD${NC}"
+        exit 1
+    fi
+elif [ "$SETUP_INFRA" = true ] && [ "$DEPLOY_BACKEND" = false ]; then
+    echo -e "\n${YELLOW}=== Skipping Backend Infrastructure Setup (backend deployment skipped) ===${NC}"
 fi
 
-# Check if user is authenticated with AWS
-if ! aws sts get-caller-identity &> /dev/null; then
-  echo -e "${RED}Not authenticated with AWS. Please run 'aws configure' first.${NC}"
-  exit 1
-fi
-
-# Backend Deployment
+# Step 2: Deploy Backend Code (if not skipped)
 if [ "$DEPLOY_BACKEND" = true ]; then
-  echo -e "\\n${YELLOW}=== Deploying Backend ===${NC}"
-  echo "Backend deployment method: $DEPLOY_METHOD"
-  if [ "$SETUP_INFRA" = true ]; then
-    echo -e "${YELLOW}Full infrastructure setup for backend is implied by deploy-backend.sh execution.${NC}"
-  fi
-  # The deploy-backend.sh script handles SAM/Serverless deployment.
-  # These tools typically create/update infrastructure (CloudFormation stack) and deploy code.
-  ./scripts/deploy-backend.sh \
-    --stack-name "$STACK_NAME" \
-    --region "$REGION" \
-    --s3-bucket "$S3_BUCKET" \
-    --method "$DEPLOY_METHOD"
-    
-  # Get the API URL from the CloudFormation output
-  API_URL=$(aws cloudformation describe-stacks \
-    --stack-name "$STACK_NAME" \
-    --region "$REGION" \
-    --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-    --output text 2>/dev/null || true)
-    
-  if [ -n "$API_URL" ]; then
-    echo -e "\\n${GREEN}Backend API URL: $API_URL${NC}"
-  else
-    echo -e "\\n${YELLOW}Warning: Could not retrieve Backend API URL. Stack might still be deploying or encountered an issue.${NC}"
-  fi
+    echo -e "\n${GREEN}=== Deploying Backend Code ===${NC}"
+    "$SCRIPTS_SUB_DIR/deploy-backend.sh" # Pass all relevant variables as env vars
 else
-  echo -e "\\n${YELLOW}=== Skipping Backend Deployment ===${NC}"
+    echo -e "\n${YELLOW}=== Skipping Backend Deployment ===${NC}"
 fi
 
-# Frontend Deployment
+# Step 3: Setup Frontend Infrastructure (if --setup-infra is true)
+# This includes S3 bucket for static hosting and CloudFront distribution
+if [ "$SETUP_INFRA" = true ] && [ "$DEPLOY_FRONTEND" = true ]; then
+    echo -e "\n${GREEN}=== Setting up Frontend Infrastructure (S3 and CloudFront) ===${NC}"
+    # Call the script to create S3 bucket and CloudFront distribution
+    # Pass FRONTEND_BUCKET and REGION as arguments or environment variables
+    "$SCRIPTS_SUB_DIR/create_s3_and_cloudfront.sh" "$FRONTEND_BUCKET" "$REGION"
+    # Note: create_s3_and_cloudfront.sh should output the CloudFront distribution domain
+    # to a known location or environment variable if needed by deploy-frontend.sh
+elif [ "$SETUP_INFRA" = true ] && [ "$DEPLOY_FRONTEND" = false ]; then
+    echo -e "\n${YELLOW}=== Skipping Frontend Infrastructure Setup (frontend deployment skipped) ===${NC}"
+fi
+
+# Step 4: Build and Deploy Frontend (if not skipped)
 if [ "$DEPLOY_FRONTEND" = true ]; then
-  echo -e "\\n${YELLOW}=== Deploying Frontend ===${NC}"
-  
-  if [ "$SETUP_INFRA" = true ]; then
-    echo -e "\\n${YELLOW}--- Setting up frontend infrastructure (S3 bucket, CloudFront distribution) ---${NC}"
-    ./scripts/create_s3_and_cloudfront.sh --bucket "$FRONTEND_BUCKET" --region "$REGION"
-  else
-    echo -e "\\n${YELLOW}--- Skipping frontend infrastructure setup (using existing or assuming already set up) ---${NC}"
-  fi
-  
-  echo -e "\\n${YELLOW}--- Deploying frontend application files ---${NC}"
-  # This script builds the React app and syncs files to S3, then invalidates CloudFront.
-  ./scripts/deploy-frontend.sh --bucket "$FRONTEND_BUCKET" --region "$REGION"
-  
-  # Get the CloudFront distribution URL
-  # Attempt to get Distribution ID again in case create_s3_and_cloudfront updated it or it was already there
-  DIST_ID=$(aws cloudfront list-distributions \
-    --query "DistributionList.Items[?contains(Origins.Items[0].DomainName, '$FRONTEND_BUCKET.s3')].Id" \
-    --output text 2>/dev/null || true)
-    
-  if [ -n "$DIST_ID" ]; then
-    CLOUDFRONT_DOMAIN=$(aws cloudfront get-distribution --id "$DIST_ID" --query "Distribution.DomainName" --output text)
-    FRONTEND_URL="https://$CLOUDFRONT_DOMAIN"
-    
-    echo -e "\\n${GREEN}--- Frontend Deployment Complete ---${NC}"
-    echo -e "${GREEN}Frontend URL: $FRONTEND_URL${NC}"
-  else
-    echo -e "\\n${YELLOW}Warning: Could not find CloudFront distribution for frontend bucket '$FRONTEND_BUCKET'.${NC}"
-    echo -e "Frontend may not be accessible via CloudFront or 'scripts/create_s3_and_cloudfront.sh' needs to be run with --setup-infra.${NC}"
-  fi
+    echo -e "\n${GREEN}=== Building and Deploying Frontend ===${NC}"
+    # The deploy-frontend.sh script will handle building the React app
+    # and syncing it to the S3 bucket.
+    # It needs FRONTEND_BUCKET and potentially the CloudFront Distribution ID for invalidation.
+    "$SCRIPTS_SUB_DIR/deploy-frontend.sh" # Pass all relevant variables as env vars
+
+    # Output CloudFront URL if available (this might need to be fetched or passed from create_s3_and_cloudfront.sh)
+    # For now, constructing a probable S3 website URL or reminding user to check CloudFront console.
+    echo -e "${GREEN}Frontend deployed. Check your S3 bucket static website hosting URL or CloudFront distribution.${NC}"
+    # Example S3 URL (replace with actual if bucket is configured for website hosting):
+    # echo "Likely S3 Website URL: http://${FRONTEND_BUCKET}.s3-website-${REGION}.amazonaws.com"
 else
-  echo -e "\\n${YELLOW}=== Skipping Frontend Deployment ===${NC}"
+    echo -e "\n${YELLOW}=== Skipping Frontend Deployment ===${NC}"
 fi
 
-# Get API Gateway URL if not already set and backend wasn't skipped
-if [ -z "$API_URL" ] && [ "$DEPLOY_BACKEND" = true ]; then
-  API_URL=$(aws cloudformation describe-stacks \
-    --stack-name "$STACK_NAME" \
-    --region "$REGION" \
-    --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-    --output text 2>/dev/null || true)
-fi
 
-# Display final information
-echo -e "\n${GREEN}=== Deployment Summary ===${NC}"
-if [ -n "$API_URL" ]; then
-  echo -e "${GREEN}Backend API URL:${NC} $API_URL"
-fi
-if [ -n "$FRONTEND_URL" ]; then
-  echo -e "${GREEN}Frontend URL:${NC} $FRONTEND_URL"
-fi
-echo -e "${GREEN}Backend S3 Bucket:${NC} $S3_BUCKET"
-echo -e "${GREEN}Frontend S3 Bucket:${NC} $FRONTEND_BUCKET"
+echo -e "\n${GREEN}=== WordVile Deployment Process Finished ===${NC}"
 
-echo -e "\n${YELLOW}Next steps:${NC}"
-echo "1. Test your API endpoints:"
-echo "   curl -X GET '$API_URL/words/test'"
-echo -e "\n2. If you need to make changes, you can update and redeploy:"
-echo "   # Make your changes"
-echo "   ./deploy.sh --skip-infra  # Skip infrastructure if not changed"
-echo -e "\n3. To tear down the infrastructure, use the cleanup script:"
-echo "   ./scripts/cleanup.sh --stack-name $STACK_NAME --region $REGION"
-
-echo -e "${YELLOW}Note:${NC} It may take a few minutes for all changes to propagate globally."
+# Clean up TMPDIR
+if [ -d "$TMPDIR" ]; then
+    echo -e "\n${GREEN}Cleaning up temporary directory: $TMPDIR${NC}"
+    rm -rf "$TMPDIR"
+fi

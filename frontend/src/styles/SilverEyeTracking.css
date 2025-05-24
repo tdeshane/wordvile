@@ -1,0 +1,92 @@
+/* Eye contact effects */
+.eye-contact-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(255, 0, 0, 0.3) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 150;
+  transition: opacity 0.3s ease;
+}
+
+.eye-contact-effect.active {
+  opacity: 1;
+  animation: eyeContactPulse 0.5s ease-out;
+}
+
+@keyframes eyeContactPulse {
+  0% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+/* Enhance zombie Silver eyes for eye tracking */
+.zombie-silver-eye {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #ff0000;
+  box-shadow: 0 0 8px #ff0000;
+  animation: glowEyes 2s infinite alternate;
+  cursor: default;
+}
+
+.zombie-silver-eye.left {
+  top: 25px;
+  left: 15px;
+}
+
+.zombie-silver-eye.right {
+  top: 25px;
+  right: 15px;
+}
+
+.zombie-silver-eye.tracked {
+  animation: trackedEyes 1s infinite alternate;
+}
+
+@keyframes trackedEyes {
+  0%, 100% { box-shadow: 0 0 15px #ff0000; background: #ff3300; }
+  50% { box-shadow: 0 0 25px #ff0000; background: #ff1100; }
+}
+
+/* Camera access notification */
+.camera-notice {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  z-index: 300;
+  max-width: 250px;
+}
+
+.camera-notice.error {
+  background: rgba(255, 0, 0, 0.7);
+}
+
+.zombie-silver-face::after {
+  content: 'Avoid eye contact!';
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #ff5555;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.zombie-silver-container.attacking .zombie-silver-face::after {
+  opacity: 1;
+}

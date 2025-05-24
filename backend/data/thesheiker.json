@@ -1,0 +1,22 @@
+{
+  "name": "The Sheiker",
+  "power": 100,
+  "abilities": [
+    { "name": "Laser", "cost": 20, "description": "Fires a concentrated beam of energy." },
+    { "name": "Poison", "cost": 15, "description": "Emits a cloud of toxic gas." },
+    { "name": "Shelbox", "cost": 25, "description": "Creates a temporary protective shield." },
+    { "name": "Teleport", "cost": 30, "description": "Instantly moves to a nearby location." }
+  ],
+  "log": [],
+  "health": 100,
+  "maxHealth": 100,
+  "stamina": 100,
+  "maxStamina": 100,
+  "food": 100,
+  "maxFood": 100,
+  "oxygen": 100,
+  "maxOxygen": 100,
+  "temperature": 37,
+  "creativity": 50,
+  "imagination": 50
+}

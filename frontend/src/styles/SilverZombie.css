@@ -1,0 +1,227 @@
+/* Zombie Silver Character Styling */
+.zombie-silver-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9;
+  transition: all 0.5s ease;
+}
+
+.zombie-silver {
+  width: 120px;
+  height: 180px;
+  position: relative;
+  transform-origin: center bottom;
+  animation: zombieFloat 4s ease-in-out infinite;
+}
+
+@keyframes zombieFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.zombie-silver-head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 70px;
+  background: linear-gradient(to bottom, #6a0dad 0%, #4b0082 100%);
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: 0 0 10px rgba(106, 13, 173, 0.7);
+  overflow: hidden;
+}
+
+.zombie-silver-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.zombie-silver-eye {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #ff0000;
+  box-shadow: 0 0 8px #ff0000;
+  animation: glowEyes 2s infinite alternate;
+}
+
+.zombie-silver-eye.left {
+  top: 25px;
+  left: 15px;
+}
+
+.zombie-silver-eye.right {
+  top: 25px;
+  right: 15px;
+}
+
+@keyframes glowEyes {
+  0%, 100% { box-shadow: 0 0 5px #ff0000; }
+  50% { box-shadow: 0 0 15px #ff0000; }
+}
+
+.zombie-silver-mouth {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 10px;
+  background: #300;
+  border-radius: 0 0 15px 15px;
+  overflow: hidden;
+}
+
+.zombie-silver-body {
+  position: absolute;
+  top: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 80px;
+  background: linear-gradient(to bottom, #4b0082 0%, #6a0dad 100%);
+  border-radius: 15px 15px 25px 25px;
+  box-shadow: 0 0 10px rgba(106, 13, 173, 0.5);
+}
+
+.zombie-silver-arm {
+  position: absolute;
+  width: 15px;
+  height: 60px;
+  background: linear-gradient(to bottom, #4b0082 0%, #6a0dad 100%);
+  border-radius: 10px;
+  transform-origin: top center;
+}
+
+.zombie-silver-arm.left {
+  top: 75px;
+  left: 25px;
+  transform: rotate(15deg);
+}
+
+.zombie-silver-arm.right {
+  top: 75px;
+  right: 25px;
+  transform: rotate(-15deg);
+}
+
+.zombie-silver-leg {
+  position: absolute;
+  width: 15px;
+  height: 40px;
+  background: linear-gradient(to bottom, #4b0082 0%, #6a0dad 100%);
+  border-radius: 10px;
+  bottom: 0;
+}
+
+.zombie-silver-leg.left {
+  left: 40px;
+}
+
+.zombie-silver-leg.right {
+  right: 40px;
+}
+
+.zombie-silver-aura {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(106, 13, 173, 0.3) 0%, transparent 70%);
+  animation: pulseAura 3s infinite alternate;
+  z-index: -1;
+}
+
+@keyframes pulseAura {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.5; }
+}
+
+/* Attack animations */
+.zombie-silver.attacking .zombie-silver-arm.right {
+  animation: attackArm 1s ease-in-out;
+}
+
+@keyframes attackArm {
+  0% { transform: rotate(-15deg); }
+  50% { transform: rotate(-90deg); }
+  100% { transform: rotate(-15deg); }
+}
+
+.zombie-silver-attack-effect {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle at center, rgba(255, 0, 0, 0.7) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.zombie-silver-attack-effect.active {
+  animation: attackEffect 1s ease-out forwards;
+}
+
+@keyframes attackEffect {
+  0% { transform: scale(0.5); opacity: 0.7; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Entry and exit animations */
+.zombie-silver-container.entering {
+  animation: enterFromSide 1.5s ease-out forwards;
+}
+
+.zombie-silver-container.exiting {
+  animation: exitToSide 1.5s ease-in forwards;
+}
+
+@keyframes enterFromSide {
+  0% { transform: translateX(-150%) scale(0.8); opacity: 0; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes exitToSide {
+  0% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(150%) scale(0.8); opacity: 0; }
+}
+
+/* Damage effect */
+.word-card.damaged {
+  animation: damageEffect 0.5s ease-in-out;
+}
+
+@keyframes damageEffect {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); box-shadow: 0 0 15px rgba(255, 0, 0, 0.8); }
+}
+
+/* Player damage effect */
+.player-damage-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 0, 0, 0.2);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 100;
+  transition: opacity 0.3s ease;
+}
+
+.player-damage-overlay.active {
+  opacity: 1;
+  animation: damageOverlay 0.5s ease-out;
+}
+
+@keyframes damageOverlay {
+  0% { opacity: 0.4; }
+  100% { opacity: 0; }
+}
