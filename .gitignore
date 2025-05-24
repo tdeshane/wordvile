@@ -26,3 +26,6 @@ __pycache__/
 # Temporary files for scripts
 /tmp/bucket-policy.json
 /tmp/cloudfront-config.json
+
+# External projects
+face-controls/
