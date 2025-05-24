@@ -29,3 +29,6 @@ __pycache__/
 
 # External projects
 face-controls/
+
+# Large binary files
+*.AppImage
