@@ -100,10 +100,29 @@ const SilverGame: React.FC = () => {
     isLooking: false
   });
   
+  // Camera view states
+  const [showCameraView, setShowCameraView] = useState(true);
+  const [cameraViewPosition, setCameraViewPosition] = useState({ x: 10, y: 10 });
+  const [isDraggingCamera, setIsDraggingCamera] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  
   // Creature system states
   const [playerExperience, setPlayerExperience] = useState(0);
   const [playerLevel, setPlayerLevel] = useState(1);
   const [creatureDefeatCount, setCreatureDefeatCount] = useState(0);
+  
+  // Player and Linther poison states
+  const [playerPosition, setPlayerPosition] = useState({ x: 400, y: 300 });
+  const [isLintherPoisoned, setIsLintherPoisoned] = useState(false);
+  const [lintherPoisonLevel, setLintherPoisonLevel] = useState(0);
+  const [hungerDecayRate, setHungerDecayRate] = useState(1); // Normal decay rate
+  const [playerHealth, setPlayerHealth] = useState(100);
+  const [playerMaxHealth] = useState(100);
+  
+  // Gaze tracking states
+  const [gazePosition, setGazePosition] = useState({ x: 400, y: 300 });
+  const [isGazeTracking, setIsGazeTracking] = useState(false);
+  const [gazeSensitivity, setGazeSensitivity] = useState(12.0); // Much higher amplification factor
   
   // Refs
   const gameContainerRef = useRef<HTMLDivElement>(null);
@@ -152,7 +171,7 @@ const SilverGame: React.FC = () => {
   }, [defeatCreature]);
 
   // Eye tracking handlers
-  const handleEyeContact = useCallback((isLookingAt: boolean) => {
+  const handleEyeContact = useCallback((isLookingAt: boolean, gazeX?: number, gazeY?: number) => {
     setEyeContactDetected(isLookingAt);
     
     // Update debug stats
@@ -161,6 +180,37 @@ const SilverGame: React.FC = () => {
         ...prev,
         isLooking: isLookingAt
       }));
+    }
+    
+    // Update gaze position if provided
+    if (gazeX !== undefined && gazeY !== undefined && gameContainerRef.current) {
+      const containerRect = gameContainerRef.current.getBoundingClientRect();
+      
+      // Get center of the game area
+      const centerX = containerRect.width / 2;
+      const centerY = containerRect.height / 2;
+      
+      // Calculate offset from center (normalized to -1 to 1 range)
+      // gazeX and gazeY come from face coordinates which are in video pixel space
+      // Video size is 640x480 based on MediaPipeEyeTracker settings
+      const videoCenterX = 320; // Half of 640
+      const videoCenterY = 240; // Half of 480
+      
+      const normalizedX = (gazeX - videoCenterX) / videoCenterX;
+      const normalizedY = (gazeY - videoCenterY) / videoCenterY;
+      
+      // Apply sensitivity and scale to game area
+      // Mirror X for natural tracking
+      const scaledX = centerX - (normalizedX * centerX * gazeSensitivity);
+      const scaledY = centerY + (normalizedY * centerY * gazeSensitivity);
+      
+      // Allow some overshoot beyond boundaries for better reach
+      const maxOvershoot = 100; // pixels beyond boundary
+      setGazePosition({
+        x: Math.min(Math.max(scaledX, -maxOvershoot), containerRect.width + maxOvershoot),
+        y: Math.min(Math.max(scaledY, -maxOvershoot), containerRect.height + maxOvershoot)
+      });
+      setIsGazeTracking(true);
     }
     
     if (isLookingAt && silverChar && gameState === 'playing') {
@@ -220,8 +270,8 @@ const SilverGame: React.FC = () => {
       console.log('Setting up MediaPipe eye tracking...');
       
       const initialized = await MediaPipeEyeTracker.initialize({
-        onEyeContact: (isLookingAt: boolean) => {
-          handleEyeContact(isLookingAt);
+        onEyeContact: (isLookingAt: boolean, gazeX?: number, gazeY?: number) => {
+          handleEyeContact(isLookingAt, gazeX, gazeY);
         },
         onInitialized: () => {
           setCameraAccessGranted(true);
@@ -242,35 +292,37 @@ const SilverGame: React.FC = () => {
               ...prev,
               facesDetected: detections.length
             }));
+          }
             
-            // If we have faces detected, update stats
-            if (detections.length > 0) {
-              const detection = detections[0];
-              setFaceDetected(true);
+          // If we have faces detected, update stats
+          if (detections.length > 0) {
+            const detection = detections[0];
+            setFaceDetected(true);
+            
+            // Calculate distance from face coords to target if available
+            if (zombieEyesRef.current) {
+              const targetRect = zombieEyesRef.current.getBoundingClientRect();
+              const targetCenter = {
+                x: targetRect.left + targetRect.width / 2,
+                y: targetRect.top + targetRect.height / 2
+              };
               
-              // Calculate distance from face coords to target if available
-              if (zombieEyesRef.current) {
-                const targetRect = zombieEyesRef.current.getBoundingClientRect();
-                const targetCenter = {
-                  x: targetRect.left + targetRect.width / 2,
-                  y: targetRect.top + targetRect.height / 2
-                };
-                
-                // Simple distance calculation (this might need adjustment based on coordinate systems)
-                const distance = Math.sqrt(
-                  Math.pow(detection.faceCoords[0] - targetCenter.x, 2) + 
-                  Math.pow(detection.faceCoords[1] - targetCenter.y, 2)
-                );
-                
-                setEyeDistance(distance);
+              // Simple distance calculation (this might need adjustment based on coordinate systems)
+              const distance = Math.sqrt(
+                Math.pow(detection.faceCoords[0] - targetCenter.x, 2) + 
+                Math.pow(detection.faceCoords[1] - targetCenter.y, 2)
+              );
+              
+              setEyeDistance(distance);
+              if (eyeTrackingDebug) {
                 setFaceDetectionStats(prev => ({
                   ...prev,
                   distance: Math.round(distance)
                 }));
               }
-            } else {
-              setFaceDetected(false);
             }
+          } else {
+            setFaceDetected(false);
           }
         }
       }, {
@@ -636,6 +688,103 @@ const SilverGame: React.FC = () => {
       setEyeThreshold(thresholdValue);
     }
   }, []);
+  
+  // Eye tracking for player position (fallback to mouse if no eye tracking)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Only use mouse position if eye tracking is not active
+      if (!eyeTrackingActive && gameContainerRef.current) {
+        const rect = gameContainerRef.current.getBoundingClientRect();
+        setPlayerPosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [eyeTrackingActive]);
+  
+  // Update player position to follow gaze when eye tracking is active
+  useEffect(() => {
+    if (isGazeTracking && eyeTrackingActive && gameContainerRef.current) {
+      const containerRect = gameContainerRef.current.getBoundingClientRect();
+      // Clamp player position to game boundaries (no overshoot for player)
+      setPlayerPosition({
+        x: Math.min(Math.max(gazePosition.x, 0), containerRect.width),
+        y: Math.min(Math.max(gazePosition.y, 0), containerRect.height)
+      });
+    }
+  }, [gazePosition, isGazeTracking, eyeTrackingActive]);
+  
+  // Proximity detection and Linther poison effect
+  useEffect(() => {
+    if (gameState !== 'playing' || !showZombie) return;
+    
+    // Calculate distance to Silver
+    const dx = playerPosition.x - zombiePosition.x;
+    const dy = playerPosition.y - zombiePosition.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Linther poison threshold (adjust as needed)
+    const LINTHER_PROXIMITY_THRESHOLD = 150;
+    
+    if (distance < LINTHER_PROXIMITY_THRESHOLD) {
+      // Apply Linther poison
+      if (!isLintherPoisoned) {
+        setIsLintherPoisoned(true);
+      }
+      
+      // Increase poison level based on proximity
+      const poisonIntensity = 1 - (distance / LINTHER_PROXIMITY_THRESHOLD);
+      setLintherPoisonLevel(poisonIntensity);
+      
+      // Increase hunger decay rate
+      setHungerDecayRate(1 + poisonIntensity * 2); // Up to 3x normal decay when very close
+    } else {
+      // Clear poison when far enough
+      if (isLintherPoisoned) {
+        setIsLintherPoisoned(false);
+        setLintherPoisonLevel(0);
+        setHungerDecayRate(1);
+      }
+    }
+  }, [playerPosition, zombiePosition, gameState, showZombie, isLintherPoisoned]);
+  
+  // Apply hunger decay with Linther effect
+  useEffect(() => {
+    if (gameState !== 'playing' || !silverChar) return;
+    
+    const hungerInterval = setInterval(() => {
+      setSilverChar(prev => {
+        if (!prev) return prev;
+        const newFood = Math.max(prev.food - hungerDecayRate, 0);
+        
+        // Starve if food reaches 0
+        if (newFood === 0 && prev.health > 0) {
+          return {
+            ...prev,
+            food: newFood,
+            health: Math.max(prev.health - 5, 0) // Lose health when starving
+          };
+        }
+        
+        return {
+          ...prev,
+          food: newFood
+        };
+      });
+      
+      // Also damage player if poisoned
+      if (isLintherPoisoned) {
+        const poisonDamage = Math.ceil(lintherPoisonLevel * 2); // 0-2 damage based on poison level
+        setPlayerHealth(prev => Math.max(prev - poisonDamage, 0));
+      }
+    }, 1000); // Update every second
+    
+    return () => clearInterval(hungerInterval);
+  }, [gameState, silverChar, hungerDecayRate, isLintherPoisoned, lintherPoisonLevel]);
 
   // Update MediaPipe EyeTracker threshold when eyeThreshold state changes
   useEffect(() => {
@@ -643,6 +792,61 @@ const SilverGame: React.FC = () => {
       MediaPipeEyeTracker.setThreshold(eyeThreshold);
     }
   }, [eyeThreshold, eyeTrackingActive]);
+  
+  // Update camera view visibility
+  useEffect(() => {
+    MediaPipeEyeTracker.setDebugViewVisible(showCameraView);
+  }, [showCameraView]);
+  
+  // Update camera view position
+  useEffect(() => {
+    MediaPipeEyeTracker.setDebugViewPosition(cameraViewPosition.x, cameraViewPosition.y);
+  }, [cameraViewPosition]);
+  
+  // Handle camera view dragging
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingCamera) {
+        const deltaX = e.clientX - dragStartPos.x;
+        const deltaY = e.clientY - dragStartPos.y;
+        setCameraViewPosition(prev => ({
+          x: prev.x + deltaX,
+          y: prev.y + deltaY
+        }));
+        setDragStartPos({ x: e.clientX, y: e.clientY });
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsDraggingCamera(false);
+    };
+    
+    if (isDraggingCamera) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDraggingCamera, dragStartPos]);
+  
+  // Add mousedown listener to camera debug container
+  useEffect(() => {
+    const debugContainer = MediaPipeEyeTracker.getDebugContainer();
+    if (debugContainer) {
+      const handleMouseDown = (e: MouseEvent) => {
+        setIsDraggingCamera(true);
+        setDragStartPos({ x: e.clientX, y: e.clientY });
+        e.preventDefault();
+      };
+      
+      debugContainer.addEventListener('mousedown', handleMouseDown);
+      return () => {
+        debugContainer.removeEventListener('mousedown', handleMouseDown);
+      };
+    }
+  }, [cameraAccessGranted]);
 
   // Reinitialize eye tracking when debug mode changes
   useEffect(() => {
@@ -719,12 +923,25 @@ const SilverGame: React.FC = () => {
         <div>Score: {score}</div>
         <div>Time Left: {timeLeft}s</div>
         <div>Power Level: {powerLevel}%</div>
+        <div style={{ color: playerHealth < 30 ? '#ff0000' : '#ffffff' }}>
+          Player Health: {playerHealth}/{playerMaxHealth}
+        </div>
         <div>Player Level: {playerLevel}</div>
         <div>Experience: {playerExperience}/100</div>
         <div>Creatures Defeated: {creatureDefeatCount}</div>
         <div>Active Creatures: {activeCreatures.length}</div>
         {gameMode !== 'creative' && (
           <div>Mode: {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)}</div>
+        )}
+        {isLintherPoisoned && (
+          <div className="linther-poison-status" style={{ color: '#9d4edd' }}>
+            ⚠️ LINTHER POISONED! (Level: {Math.round(lintherPoisonLevel * 100)}%)
+          </div>
+        )}
+        {silverChar && (
+          <div style={{ color: silverChar.food < 20 ? '#ff0000' : '#ffffff' }}>
+            Hunger Decay: {hungerDecayRate.toFixed(1)}x
+          </div>
         )}
       </div>
       
@@ -742,6 +959,39 @@ const SilverGame: React.FC = () => {
           top: `${zombiePosition.y}px`,
           opacity: zombieState === 'exiting' ? 0 : 1
         }}>
+          {/* Silver's Health Bar */}
+          {silverChar && (
+            <div className="entity-health-bar" style={{
+              position: 'absolute',
+              top: '-30px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '100px',
+              height: '10px',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '5px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${(silverChar.health / 100) * 100}%`,
+                height: '100%',
+                backgroundColor: silverChar.health > 50 ? '#4CAF50' : silverChar.health > 25 ? '#ff9800' : '#f44336',
+                transition: 'width 0.3s ease-in-out'
+              }} />
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '8px',
+                color: 'white',
+                fontWeight: 'bold'
+              }}>
+                {silverChar.health}/100
+              </div>
+            </div>
+          )}
           <div className="zombie-silver t-shaped-form">
             {/* Power Generator at Bottom */}
             <div className="power-generator">
@@ -880,6 +1130,16 @@ const SilverGame: React.FC = () => {
             onChange={e => setEyeTrackingDebug(e.target.checked)} 
           />
         </div>
+        {eyeTrackingDebug && (
+          <div>
+            <label>Show Camera View:</label>
+            <input 
+              type="checkbox" 
+              checked={showCameraView} 
+              onChange={e => setShowCameraView(e.target.checked)} 
+            />
+          </div>
+        )}
         <div>
           <label>Eye Tracking Threshold:</label>
           <input 
@@ -891,6 +1151,20 @@ const SilverGame: React.FC = () => {
           />
           <span>{eyeThreshold}</span>
         </div>
+        {eyeTrackingActive && (
+          <div>
+            <label>Gaze Sensitivity:</label>
+            <input 
+              type="range" 
+              min="1" 
+              max="20" 
+              step="0.5"
+              value={gazeSensitivity} 
+              onChange={e => setGazeSensitivity(parseFloat(e.target.value))} 
+            />
+            <span>{gazeSensitivity.toFixed(1)}x</span>
+          </div>
+        )}
       </div>
       
       {/* Camera Permission Status */}
@@ -913,7 +1187,8 @@ const SilverGame: React.FC = () => {
               <div style={{ marginTop: '5px', fontSize: '0.8rem' }}>
                 Faces detected: {faceDetectionStats.facesDetected} | 
                 Distance: {faceDetectionStats.distance}px | 
-                Looking: {faceDetectionStats.isLooking ? '👁️' : '👀'}
+                Looking: {faceDetectionStats.isLooking ? '👁️' : '👀'} |
+                Gaze: ({gazePosition.x.toFixed(0)}, {gazePosition.y.toFixed(0)})
               </div>
             )}
           </div>
@@ -951,11 +1226,225 @@ const SilverGame: React.FC = () => {
         <h3>Calibration Guide:</h3>
         <ol style={{ paddingLeft: '20px', fontSize: '0.8rem' }}>
           <li>Make sure your face is well-lit</li>
-          <li>Adjust the threshold slider based on your distance from the camera</li>
-          <li>Try to stay at a consistent distance</li>
-          <li>If detection is unstable, increase the threshold value</li>
+          <li>Look at the corners of the game area to calibrate range</li>
+          <li>Adjust "Gaze Sensitivity" if movement is too small/large</li>
+          <li>Try to stay at a consistent distance from camera</li>
+          <li>Small head movements = large cursor movements</li>
         </ol>
+        {eyeTrackingActive && (
+          <div style={{ marginTop: '10px', padding: '10px', backgroundColor: 'rgba(0, 255, 255, 0.1)', borderRadius: '5px' }}>
+            <strong>Tip:</strong> Move your head slightly left/right and up/down. The gaze should amplify your movements by {gazeSensitivity.toFixed(1)}x
+          </div>
+        )}
       </div>
+      
+      {/* Player cursor visualization (always visible) */}
+      <div 
+        className="player-cursor"
+        style={{
+          position: 'absolute',
+          left: `${playerPosition.x}px`,
+          top: `${playerPosition.y}px`,
+          width: eyeTrackingDebug ? '30px' : '20px',
+          height: eyeTrackingDebug ? '30px' : '20px',
+          borderRadius: '50%',
+          backgroundColor: isLintherPoisoned ? '#9d4edd' : '#00ff00',
+          border: '3px solid white',
+          pointerEvents: 'none',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 9998,
+          boxShadow: isLintherPoisoned ? `0 0 ${20 * lintherPoisonLevel}px #9d4edd` : '0 0 10px rgba(0, 255, 0, 0.5)',
+          transition: 'all 0.1s ease-out'
+        }}
+      >
+        {/* Always show player label */}
+        <div style={{
+          position: 'absolute',
+          top: '-25px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '14px',
+          color: 'white',
+          whiteSpace: 'nowrap',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: '3px 8px',
+          borderRadius: '4px',
+          fontWeight: 'bold',
+          textShadow: '1px 1px 2px rgba(0, 0, 0, 0.9)'
+        }}>
+          PLAYER {eyeTrackingActive ? '(👁️)' : '(🖱️)'}
+        </div>
+        {/* Player Health Bar */}
+        <div style={{
+          position: 'absolute',
+          bottom: '-30px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '70px',
+          height: '10px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          border: '2px solid rgba(255, 255, 255, 0.7)',
+          borderRadius: '5px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            width: `${(playerHealth / playerMaxHealth) * 100}%`,
+            height: '100%',
+            backgroundColor: playerHealth > 50 ? '#4CAF50' : playerHealth > 25 ? '#ff9800' : '#f44336',
+            transition: 'width 0.3s ease-in-out'
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '8px',
+            color: 'white',
+            fontWeight: 'bold',
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.9)'
+          }}>
+            {playerHealth}/{playerMaxHealth}
+          </div>
+        </div>
+        {/* Inner glow effect */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: '10px',
+          height: '10px',
+          borderRadius: '50%',
+          backgroundColor: 'white',
+          transform: 'translate(-50%, -50%)',
+          opacity: 0.8
+        }} />
+      </div>
+      
+      {/* Gaze indicator (always visible when eye tracking) */}
+      {isGazeTracking && (
+        <div 
+          className="gaze-indicator"
+          style={{
+            position: 'absolute',
+            left: `${gazePosition.x}px`,
+            top: `${gazePosition.y}px`,
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: 'transparent',
+            border: '3px dashed #00ffff',
+            pointerEvents: 'none',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 9997,
+            animation: 'gazeRotate 4s linear infinite'
+          }}
+        >
+          {/* Gaze label */}
+          <div style={{
+            position: 'absolute',
+            top: '-30px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '12px',
+            color: '#00ffff',
+            whiteSpace: 'nowrap',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            fontWeight: 'bold',
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.9)'
+          }}>
+            GAZE POINT
+          </div>
+          {/* Center dot */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: '#00ffff',
+            transform: 'translate(-50%, -50%)',
+            boxShadow: '0 0 10px #00ffff'
+          }} />
+          {/* Crosshair lines */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '0',
+            right: '0',
+            height: '1px',
+            backgroundColor: '#00ffff',
+            opacity: 0.5
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            bottom: '0',
+            left: '50%',
+            width: '1px',
+            backgroundColor: '#00ffff',
+            opacity: 0.5
+          }} />
+        </div>
+      )}
+      
+      {/* Linther poison visual effect */}
+      {isLintherPoisoned && (
+        <div 
+          className="linther-poison-overlay"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'none',
+            background: `radial-gradient(circle at ${playerPosition.x}px ${playerPosition.y}px, 
+              rgba(157, 78, 221, ${0.3 * lintherPoisonLevel}) 0%, 
+              transparent 40%)`,
+            zIndex: 9997,
+            animation: 'pulse 2s ease-in-out infinite'
+          }}
+        />
+      )}
+      
+      {/* Linther poison particles effect around Silver */}
+      {isLintherPoisoned && showZombie && (
+        <div 
+          className="linther-particles"
+          style={{
+            position: 'absolute',
+            left: `${zombiePosition.x}px`,
+            top: `${zombiePosition.y}px`,
+            width: '300px',
+            height: '300px',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            zIndex: 9996
+          }}
+        >
+          {[...Array(10)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                width: '4px',
+                height: '4px',
+                backgroundColor: '#9d4edd',
+                borderRadius: '50%',
+                left: '50%',
+                top: '50%',
+                transform: `rotate(${i * 36}deg) translateX(${50 + Math.random() * 100}px)`,
+                opacity: lintherPoisonLevel * 0.8,
+                animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 2}s`
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

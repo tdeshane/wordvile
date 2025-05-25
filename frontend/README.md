@@ -1,25 +1,24 @@
-# Bible Word Scramble Game
+# Wordvile
 
-A fun and educational word game for Sunday School students to unscramble Bible-related words and learn about important people, places, and concepts from the Bible.
+A narrative-driven game where words have physical form and language shapes reality. Built with React, TypeScript, and eye-tracking technology.
 
 ## Game Features
 
-- Scrambled Bible words for players to unscramble
-- Hints available for each word (with a small point penalty)
-- Scoring system that rewards correct answers
-- Progress tracking through a set of Bible words
-- Responsive design that works on all devices
+- **Eye Tracking Integration**: Control the game with your eyes using MediaPipe Face Mesh
+- **The GREAT LEXICON**: An omnipotent force that activates when you look away
+- **Multiple Game Modes**: Survival, Peaceful, and Creative modes
+- **Word-Based Combat**: Use verbs to attack, adjectives to modify, and nouns as tools
+- **Narrative Transportation**: Navigate through story spaces
+- **Creature Collection**: Befriend and collect linguistic creatures
 
 ## How to Play
 
-1. Look at the scrambled Bible word displayed on the screen
-2. Type your guess in the input box
-3. Click "Submit" to check your answer
-4. If you're stuck, you can click "Show Hint" for a clue (at the cost of 1 point)
-5. If you want to skip a word, click "Skip Word" 
-6. Each correct answer without hints gives you 2 points
-7. Each correct answer with a hint gives you 1 point
-8. Try to get the highest score possible!
+1. Enable camera access for eye tracking
+2. Look at different parts of the screen to control your character
+3. Collect words to build your linguistic arsenal
+4. Defeat corrupted language entities
+5. Progress through narrative layers
+6. Keep your eyes on screen - looking away activates the GREAT LEXICON
 
 ## Getting Started
 
@@ -30,32 +29,46 @@ A fun and educational word game for Sunday School students to unscramble Bible-r
 ### Installation
 
 1. Clone this repository
-2. Navigate to the project directory
-3. Install dependencies:
+2. Navigate to the frontend directory:
+   ```bash
+   cd frontend
    ```
+3. Install dependencies:
+   ```bash
    npm install
    ```
 4. Start the development server:
-   ```
-   npm start
+   ```bash
+   npm run dev
    ```
 5. Open your browser and visit http://localhost:3000
 
 ## Built With
 
-- React - JavaScript library for building user interfaces
-- TypeScript - Typed superset of JavaScript
-- CSS - For styling components
+- **React 19** - Latest React with improved performance
+- **TypeScript** - Type-safe development
+- **Vite** - Lightning-fast build tool
+- **Zustand** - Lightweight state management
+- **MediaPipe** - Advanced eye tracking
+- **Playwright** - E2E testing
 
-## Educational Purpose
+## Architecture
 
-This game is designed to help Sunday School students become more familiar with biblical terms, characters, and concepts in a fun and engaging way.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed technical architecture.
 
-## License
+## Development
 
-This project is available for free use in educational and religious settings.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run TypeScript type checking
+- `npm test` - Run unit tests
+- `npm run test:playwright` - Run E2E tests
 
-## Acknowledgments
+## Environment Variables
 
-- Inspired by traditional word scramble games
-- Developed for Sunday School students and teachers
+- `VITE_API_URL` - Backend API endpoint
+- `VITE_APP_ENV` - Environment (development/production)
+
+## Contributing
+
+See [START_HERE.md](./START_HERE.md) for development guidelines.

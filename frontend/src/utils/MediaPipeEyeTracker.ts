@@ -16,7 +16,7 @@ declare global {
 }
 
 export interface EyeTrackingOptions {
-  onEyeContact?: (isLookingAt: boolean) => void;
+  onEyeContact?: (isLookingAt: boolean, gazeX?: number, gazeY?: number) => void;
   onInitialized?: () => void;
   onError?: (error: { message: string }) => void;
   onDetection?: (detections: FaceDetection[]) => void;
@@ -51,9 +51,10 @@ class MediaPipeEyeTracker {
   private isTracking = false;
   private targetElement: HTMLElement | null = null;
   private animationFrameId: number | null = null;
+  private debugContainer: HTMLDivElement | null = null;
   
   // Callbacks
-  private onEyeContactCallback?: (isLookingAt: boolean) => void;
+  private onEyeContactCallback?: (isLookingAt: boolean, gazeX?: number, gazeY?: number) => void;
   private onInitializedCallback?: () => void;
   private onErrorCallback?: (error: { message: string }) => void;
   private onDetectionCallback?: (detections: FaceDetection[]) => void;
@@ -118,15 +119,17 @@ class MediaPipeEyeTracker {
       if (this.debug) {
         console.log('🎨 Debug mode enabled - creating visual overlay...');
         // Create container for video and canvas overlay
-        const container = document.createElement('div');
-        container.style.position = 'fixed';
-        container.style.top = '10px';
-        container.style.left = '10px';
-        container.style.width = '320px';
-        container.style.height = '240px';
-        container.style.zIndex = '9999';
-        container.style.border = '2px solid red';
-        container.style.overflow = 'hidden';
+        this.debugContainer = document.createElement('div');
+        this.debugContainer.style.position = 'fixed';
+        this.debugContainer.style.top = '10px';
+        this.debugContainer.style.left = '10px';
+        this.debugContainer.style.width = '320px';
+        this.debugContainer.style.height = '240px';
+        this.debugContainer.style.zIndex = '9999';
+        this.debugContainer.style.border = '2px solid red';
+        this.debugContainer.style.overflow = 'hidden';
+        this.debugContainer.style.cursor = 'move';
+        this.debugContainer.className = 'mediapipe-debug-container';
         
         // Style video element
         this.videoElement.style.width = '100%';
@@ -146,9 +149,9 @@ class MediaPipeEyeTracker {
         this.canvasCtx = this.canvasElement.getContext('2d');
         console.log('Canvas context created:', this.canvasCtx ? '✅' : '❌');
         
-        container.appendChild(this.videoElement);
-        container.appendChild(this.canvasElement);
-        document.body.appendChild(container);
+        this.debugContainer.appendChild(this.videoElement);
+        this.debugContainer.appendChild(this.canvasElement);
+        document.body.appendChild(this.debugContainer);
         console.log('✅ Debug overlay container added to DOM');
       }
       
@@ -156,7 +159,7 @@ class MediaPipeEyeTracker {
       console.log('🤖 Initializing MediaPipe FaceMesh...');
       this.faceMesh = new window.FaceMesh({
         locateFile: (file: string) => {
-          const url = `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+          const url = `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
           console.log(`Loading MediaPipe file: ${url}`);
           return url;
         }
@@ -253,11 +256,12 @@ class MediaPipeEyeTracker {
       this.stream = null;
     }
     
+    if (this.debugContainer && this.debugContainer.parentNode) {
+      this.debugContainer.parentNode.removeChild(this.debugContainer);
+      this.debugContainer = null;
+    }
+    
     if (this.videoElement) {
-      const container = this.videoElement.parentNode;
-      if (container && container.parentNode) {
-        container.parentNode.removeChild(container);
-      }
       this.videoElement.srcObject = null;
       this.videoElement = null;
     }
@@ -372,7 +376,8 @@ class MediaPipeEyeTracker {
         const isLookingAt = this.checkEyeContact(detection);
         
         if (this.onEyeContactCallback) {
-          this.onEyeContactCallback(isLookingAt);
+          // Pass gaze coordinates (face position)
+          this.onEyeContactCallback(isLookingAt, detection.faceCoords[0], detection.faceCoords[1]);
         }
       }
     }
@@ -578,6 +583,24 @@ class MediaPipeEyeTracker {
   
   isReady(): boolean {
     return this.isInitialized && this.isTracking;
+  }
+  
+  // Debug view control methods
+  setDebugViewVisible(visible: boolean): void {
+    if (this.debugContainer) {
+      this.debugContainer.style.display = visible ? 'block' : 'none';
+    }
+  }
+  
+  setDebugViewPosition(x: number, y: number): void {
+    if (this.debugContainer) {
+      this.debugContainer.style.left = `${x}px`;
+      this.debugContainer.style.top = `${y}px`;
+    }
+  }
+  
+  getDebugContainer(): HTMLDivElement | null {
+    return this.debugContainer;
   }
 }
 
