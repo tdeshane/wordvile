@@ -1,0 +1,251 @@
+.calibration-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.calibration-content {
+  background: #1a1a2e;
+  padding: 40px;
+  border-radius: 12px;
+  max-width: 600px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+}
+
+.calibration-content h2 {
+  color: #00ffff;
+  margin-bottom: 20px;
+  font-size: 28px;
+}
+
+.calibration-content p {
+  color: #ffffff;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.calibration-status {
+  margin: 30px 0;
+}
+
+.status-indicator {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-indicator.error {
+  background: #ff4444;
+  color: white;
+}
+
+.status-indicator.success {
+  background: #44ff44;
+  color: #1a1a2e;
+}
+
+.sensitivity-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 30px 0;
+  color: white;
+}
+
+.sensitivity-control label {
+  font-weight: bold;
+}
+
+.sensitivity-control input[type="range"] {
+  width: 200px;
+}
+
+.sensitivity-control span {
+  min-width: 40px;
+  text-align: left;
+  font-weight: bold;
+  color: #00ffff;
+}
+
+.calibration-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin: 30px 0;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: #00ffff;
+  color: #1a1a2e;
+}
+
+.btn-primary:hover {
+  background: #00cccc;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #00ffff;
+  border: 2px solid #00ffff;
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.calibration-tips {
+  margin-top: 40px;
+  text-align: left;
+  background: rgba(0, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.calibration-tips h3 {
+  color: #00ffff;
+  margin-bottom: 15px;
+}
+
+.calibration-tips ul {
+  list-style: none;
+  padding: 0;
+}
+
+.calibration-tips li {
+  color: #ffffff;
+  margin-bottom: 10px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.calibration-tips li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: #00ffff;
+}
+
+/* Calibrating state */
+.calibration-container.calibrating {
+  background: #0a0a0a;
+}
+
+.calibration-overlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.calibration-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+.point-marker {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.calibration-point.active .point-marker {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: #00ffff;
+  box-shadow: 0 0 30px #00ffff;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.calibration-point.completed .point-marker {
+  background: rgba(0, 255, 0, 0.3);
+  border-color: #00ff00;
+  transform: scale(0.8);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.countdown {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+
+.eye-position-indicator {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 0, 0.8);
+  border: 2px solid #ffff00;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: all 0.1s ease-out;
+  box-shadow: 0 0 20px rgba(255, 255, 0, 0.5);
+}
+
+.calibration-instructions {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.calibration-instructions p {
+  color: #ffffff;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.progress {
+  color: #00ffff;
+  font-weight: bold;
+}
