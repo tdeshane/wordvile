@@ -1,4 +1,4 @@
-import mediaEyeTracker from '@utils/MediaPipeEyeTracker'
+import faceApiEyeTracker from '@utils/FaceApiEyeTracker'
 import { useEyeTrackingStore } from '@store/useEyeTrackingStore'
 import logger from '@utils/logger'
 
@@ -26,25 +26,25 @@ class EyeTrackingService {
     logger.info('Initializing Eye Tracking Service')
     
     try {
-      // Initialize MediaPipe tracker
-      const initialized = await mediaEyeTracker.initialize({
+      // Initialize face-api.js tracker
+      const initialized = await faceApiEyeTracker.initialize({
         onEyeContact: this.handleEyeContact.bind(this),
         onInitialized: this.handleInitialized.bind(this),
         onError: this.handleError.bind(this),
         onDetection: this.handleDetection.bind(this),
-        debug: process.env.NODE_ENV === 'development'
+        debug: import.meta.env.DEV
       }, {
         threshold: 100,
         videoSize: { width: 640, height: 480 }
       })
       
       if (!initialized) {
-        throw new Error('Failed to initialize MediaPipe tracker')
+        throw new Error('Failed to initialize face-api.js tracker')
       }
       
-      // Load GREAT LEXICON audio
-      this.greatLexiconAudio = new Audio('/audio/great-lexicon-theme.mp3')
-      this.greatLexiconAudio.loop = true
+      // Load GREAT LEXICON audio (disabled for now)
+      // this.greatLexiconAudio = new Audio('/audio/great-lexicon-theme.mp3')
+      // this.greatLexiconAudio.loop = true
       
     } catch (error) {
       logger.error('Eye tracking initialization failed', error)
@@ -68,27 +68,37 @@ class EyeTrackingService {
   private handleEyePresence(eyesDetected: boolean): void {
     const store = useEyeTrackingStore.getState()
     
-    // Clear existing timeout
-    if (this.eyePresenceTimeout) {
-      clearTimeout(this.eyePresenceTimeout)
-      this.eyePresenceTimeout = null
-    }
-    
     if (!eyesDetected && this.lastEyePresence) {
       // Eyes just left - start grace period
       logger.warn('Eyes lost - starting grace period')
+      
+      // Clear any existing timeout and start a new one
+      if (this.eyePresenceTimeout) {
+        clearTimeout(this.eyePresenceTimeout)
+      }
       
       this.eyePresenceTimeout = setTimeout(() => {
         logger.error('GREAT LEXICON ACTIVATED - Eyes absent')
         store.setEyesOnScreen(false)
         this.activateGreatLexicon()
-      }, 500) // 500ms grace period
+      }, 2000) // 2 second grace period
       
     } else if (eyesDetected && !this.lastEyePresence) {
-      // Eyes returned
+      // Eyes returned - clear timeout if exists
+      if (this.eyePresenceTimeout) {
+        clearTimeout(this.eyePresenceTimeout)
+        this.eyePresenceTimeout = null
+      }
+      
       logger.info('Eyes returned - deactivating GREAT LEXICON')
       store.setEyesOnScreen(true)
       this.deactivateGreatLexicon()
+    } else if (!eyesDetected && !this.lastEyePresence) {
+      // Eyes still absent - don't clear the timeout
+      // Just log for debugging
+      if (this.eyePresenceTimeout) {
+        logger.debug('Eyes still absent - grace period continues')
+      }
     }
     
     this.lastEyePresence = eyesDetected
@@ -212,7 +222,7 @@ class EyeTrackingService {
   startTracking(targetElement?: HTMLElement): void {
     const element = targetElement || document.getElementById('game-viewport')
     if (element) {
-      mediaEyeTracker.startTracking(element)
+      faceApiEyeTracker.startTracking(element)
       logger.info('Eye tracking started')
     } else {
       logger.error('No target element for eye tracking')
@@ -220,14 +230,14 @@ class EyeTrackingService {
   }
   
   stopTracking(): void {
-    mediaEyeTracker.stopTracking()
+    faceApiEyeTracker.stopTracking()
     useEyeTrackingStore.getState().setTracking(false)
     logger.info('Eye tracking stopped')
   }
   
   cleanup(): void {
     this.stopTracking()
-    mediaEyeTracker.cleanup()
+    faceApiEyeTracker.cleanup()
     
     if (this.eyePresenceTimeout) {
       clearTimeout(this.eyePresenceTimeout)

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_BASE = process.env.NODE_ENV === 'development'
+const API_BASE = import.meta.env.MODE === 'development'
   ? 'http://localhost:4000' // Backend port for local development
-  : process.env.REACT_APP_API_URL || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod'; // Changed to REACT_APP_API_URL
+  : import.meta.env.VITE_API_URL || 'https://l4cy74gnlb.execute-api.us-east-1.amazonaws.com/Prod'; // Changed to VITE_API_URL
 
 export interface SilverState {
   name: string;

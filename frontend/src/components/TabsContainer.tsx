@@ -14,7 +14,7 @@ function getQueryParam(name: string) {
 type Tab = 'wordScramble' | 'hangman' | 'wordSearch' | 'silver' | 'silverStory';
 
 const TabsContainer: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('wordScramble');
+  const [activeTab, setActiveTab] = useState<Tab>('silver');
   
   // Shared admin state
   const [isAdmin, setIsAdmin] = useState(getQueryParam('admin') === '1');

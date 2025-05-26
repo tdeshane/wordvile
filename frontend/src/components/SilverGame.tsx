@@ -114,6 +114,13 @@ const SilverGame: React.FC = () => {
   const [isGazeTracking, setIsGazeTracking] = useState(false);
   const [gazeSensitivity, setGazeSensitivity] = useState(12.0); // Much higher amplification factor
   
+  // Refs - declare before use in hooks
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+  const zombieAttackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const zombieAppearanceIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const zombieEyesRef = useRef<HTMLDivElement>(null);
+  const eyeContactIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Use eye tracking hook
   const {
     isTracking: eyeTrackingActive,
@@ -134,15 +141,8 @@ const SilverGame: React.FC = () => {
       console.log('Eyes returned - Silver is watching...');
     }
   });
-  
-  // Refs
-  const gameContainerRef = useRef<HTMLDivElement>(null);
-  const zombieAttackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const zombieAppearanceIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const zombieEyesRef = useRef<HTMLDivElement>(null);
-  const eyeContactIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const API_URL = process.env.REACT_APP_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Creature management hook
   const {
@@ -604,7 +604,7 @@ const SilverGame: React.FC = () => {
       }
       // Eye tracking is now managed by the hook
     }
-  }, [gameState, eyeTrackingActive, cameraAccessGranted]);
+  }, [gameState, eyeTrackingActive]);
   
   
   // Eye tracking for player position (fallback to mouse if no eye tracking)

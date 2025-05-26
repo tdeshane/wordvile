@@ -5,6 +5,7 @@ import { SilverProvider } from './components/SilverContext';
 import EyeTrackingCalibration from './components/EyeTrackingCalibration';
 import GreatLexicon from './components/GreatLexicon';
 import { useEyeTrackingStore } from '@store/useEyeTrackingStore';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [showCalibration, setShowCalibration] = useState(false);
@@ -52,9 +53,11 @@ function App() {
             <p>Challenge yourself with fun word puzzles!</p>
           </header>
           <main id="game-viewport">
-            <SilverProvider>
-              <TabsContainer />
-            </SilverProvider>
+            <ErrorBoundary>
+              <SilverProvider>
+                <TabsContainer />
+              </SilverProvider>
+            </ErrorBoundary>
           </main>
           <footer>
             <p>Created with ❤️ for word game enthusiasts</p>
