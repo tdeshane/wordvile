@@ -58,11 +58,11 @@ export const GreatLexicon: React.FC = () => {
       
       <div className="lexicon-content">
         <div className="lexicon-symbol">
-          <svg viewBox="0 0 200 200" className="rotating-glyph">
-            <text x="100" y="100" textAnchor="middle" dominantBaseline="middle">
-              ☥
-            </text>
-          </svg>
+          <img 
+            src="/the_GREAT_LEXICON.png" 
+            alt="THE GREAT LEXICON" 
+            className="great-lexicon-image"
+          />
         </div>
         
         <h1 className="lexicon-title glitch" data-text="THE GREAT LEXICON">

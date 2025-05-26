@@ -57,6 +57,18 @@
 /* Rotating symbol */
 .lexicon-symbol {
   margin-bottom: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* GREAT LEXICON image */
+.great-lexicon-image {
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 60px #ff0000);
+  animation: float 3s ease-in-out infinite, pulse 2s ease-in-out infinite;
 }
 
 .rotating-glyph {
@@ -310,6 +322,18 @@
   }
   to {
     transform: translate(50px, 50px);
+  }
+}
+
+/* Additional animations */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
   }
 }
 

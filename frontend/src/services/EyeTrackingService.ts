@@ -42,9 +42,9 @@ class EyeTrackingService {
         throw new Error('Failed to initialize face-api.js tracker')
       }
       
-      // Load GREAT LEXICON audio (disabled for now)
-      // this.greatLexiconAudio = new Audio('/audio/great-lexicon-theme.mp3')
-      // this.greatLexiconAudio.loop = true
+      // Load GREAT LEXICON audio
+      this.greatLexiconAudio = new Audio('/audio/the_GREAT_LEXICON.wav')
+      this.greatLexiconAudio.loop = false // Don't loop the sound effect
       
     } catch (error) {
       logger.error('Eye tracking initialization failed', error)
@@ -106,10 +106,14 @@ class EyeTrackingService {
   
   private activateGreatLexicon(): void {
     const store = useEyeTrackingStore.getState()
+    logger.error('ACTIVATING GREAT LEXICON - Store state before:', store.isGreatLexiconActive)
     store.activateGreatLexicon()
+    logger.error('GREAT LEXICON ACTIVATED - Store state after:', store.isGreatLexiconActive)
     
     // Play ominous audio
     if (this.greatLexiconAudio) {
+      // Reset to beginning and play
+      this.greatLexiconAudio.currentTime = 0
       this.greatLexiconAudio.play().catch(e => 
         logger.error('Failed to play GREAT LEXICON audio', e)
       )
