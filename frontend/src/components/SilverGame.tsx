@@ -7,7 +7,7 @@ import '../styles/SilverZombieDebug.css';
 import '../styles/SilverEyeTracking.css';
 import '../styles/SilverEnhanced.css';
 import '../styles/CreatureSystem.css';
-import MediaPipeEyeTracker, { FaceDetection } from '../utils/MediaPipeEyeTracker';
+import { useEyeTracking } from '../hooks/useEyeTracking';
 import { useCreatureManager } from '../hooks/useCreatureManager';
 import { CreatureDisplay } from './CreatureDisplay';
 import { Creature } from '../types/creatures';
@@ -81,30 +81,20 @@ const SilverGame: React.FC = () => {
   const [sheikersActive, setSheikersActive] = useState(false);
   
   // Eye tracking states
-  const [eyeTrackingActive, setEyeTrackingActive] = useState(false);
   const [eyeContactDetected, setEyeContactDetected] = useState(false);
   const [eyeContactDuration, setEyeContactDuration] = useState(0);
   const [showEyeContactEffect, setShowEyeContactEffect] = useState(false);
-  const [cameraAccessGranted, setCameraAccessGranted] = useState(false);
-  const [cameraPermissionError, setCameraPermissionError] = useState<string | null>(null);
   const [eyeTrackingDebug, setEyeTrackingDebug] = useState(false);
-  const [eyeTrackingInitializing, setEyeTrackingInitializing] = useState(false);
   
   // Debug stats
   const [faceDetected, setFaceDetected] = useState(false);
   const [eyeDistance, setEyeDistance] = useState(0);
-  const [eyeThreshold, setEyeThreshold] = useState(100);
   const [faceDetectionStats, setFaceDetectionStats] = useState({
     facesDetected: 0,
     distance: 0,
     isLooking: false
   });
   
-  // Camera view states
-  const [showCameraView, setShowCameraView] = useState(true);
-  const [cameraViewPosition, setCameraViewPosition] = useState({ x: 10, y: 10 });
-  const [isDraggingCamera, setIsDraggingCamera] = useState(false);
-  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   
   // Creature system states
   const [playerExperience, setPlayerExperience] = useState(0);
@@ -123,6 +113,27 @@ const SilverGame: React.FC = () => {
   const [gazePosition, setGazePosition] = useState({ x: 400, y: 300 });
   const [isGazeTracking, setIsGazeTracking] = useState(false);
   const [gazeSensitivity, setGazeSensitivity] = useState(12.0); // Much higher amplification factor
+  
+  // Use eye tracking hook
+  const {
+    isTracking: eyeTrackingActive,
+    isEyesOnScreen,
+    eyePosition,
+    isGreatLexiconActive,
+    startTracking,
+    stopTracking,
+    setSensitivity
+  } = useEyeTracking({
+    targetElement: zombieEyesRef.current,
+    autoStart: false,
+    onEyesLost: () => {
+      console.log('Eyes lost - Silver notices!');
+      setEyeContactDetected(false);
+    },
+    onEyesFound: () => {
+      console.log('Eyes returned - Silver is watching...');
+    }
+  });
   
   // Refs
   const gameContainerRef = useRef<HTMLDivElement>(null);
@@ -170,74 +181,70 @@ const SilverGame: React.FC = () => {
     defeatCreature(spawnTime);
   }, [defeatCreature]);
 
-  // Eye tracking handlers
-  const handleEyeContact = useCallback((isLookingAt: boolean, gazeX?: number, gazeY?: number) => {
-    setEyeContactDetected(isLookingAt);
-    
-    // Update debug stats
-    if (eyeTrackingDebug) {
-      setFaceDetectionStats(prev => ({
-        ...prev,
-        isLooking: isLookingAt
-      }));
-    }
-    
-    // Update gaze position if provided
-    if (gazeX !== undefined && gazeY !== undefined && gameContainerRef.current) {
+  // Update gaze position based on eye tracking
+  useEffect(() => {
+    if (eyePosition && gameContainerRef.current) {
       const containerRect = gameContainerRef.current.getBoundingClientRect();
       
-      // Get center of the game area
+      // Calculate gaze position relative to game container
+      const relativeX = eyePosition.x - containerRect.left;
+      const relativeY = eyePosition.y - containerRect.top;
+      
+      // Apply sensitivity
       const centerX = containerRect.width / 2;
       const centerY = containerRect.height / 2;
+      const offsetX = (relativeX - centerX) / centerX;
+      const offsetY = (relativeY - centerY) / centerY;
       
-      // Calculate offset from center (normalized to -1 to 1 range)
-      // gazeX and gazeY come from face coordinates which are in video pixel space
-      // Video size is 640x480 based on MediaPipeEyeTracker settings
-      const videoCenterX = 320; // Half of 640
-      const videoCenterY = 240; // Half of 480
-      
-      const normalizedX = (gazeX - videoCenterX) / videoCenterX;
-      const normalizedY = (gazeY - videoCenterY) / videoCenterY;
-      
-      // Apply sensitivity and scale to game area
-      // Mirror X for natural tracking
-      const scaledX = centerX - (normalizedX * centerX * gazeSensitivity);
-      const scaledY = centerY + (normalizedY * centerY * gazeSensitivity);
+      const scaledX = centerX + (offsetX * centerX * gazeSensitivity);
+      const scaledY = centerY + (offsetY * centerY * gazeSensitivity);
       
       // Allow some overshoot beyond boundaries for better reach
-      const maxOvershoot = 100; // pixels beyond boundary
+      const maxOvershoot = 100;
       setGazePosition({
         x: Math.min(Math.max(scaledX, -maxOvershoot), containerRect.width + maxOvershoot),
         y: Math.min(Math.max(scaledY, -maxOvershoot), containerRect.height + maxOvershoot)
       });
       setIsGazeTracking(true);
     }
-    
-    if (isLookingAt && silverChar && gameState === 'playing') {
-      // Start counting duration of eye contact
-      if (!eyeContactIntervalRef.current) {
-        let duration = 0;
-        eyeContactIntervalRef.current = setInterval(() => {
-          duration += 100;
-          setEyeContactDuration(duration);
-          
-          // Every 1000ms (1 second) of eye contact, apply negative effects
-          if (duration % 1000 === 0) {
-            // Show visual effect
-            setShowEyeContactEffect(true);
-            setTimeout(() => setShowEyeContactEffect(false), 300);
+  }, [eyePosition, gazeSensitivity]);
+  
+  // Handle eye contact detection
+  useEffect(() => {
+    if (isEyesOnScreen && eyeTrackingActive && silverChar && gameState === 'playing' && !isGreatLexiconActive) {
+      // Detect if looking at Silver
+      if (zombieEyesRef.current && eyePosition) {
+        const zombieRect = zombieEyesRef.current.getBoundingClientRect();
+        const isLookingAt = eyePosition.x >= zombieRect.left && 
+                           eyePosition.x <= zombieRect.right &&
+                           eyePosition.y >= zombieRect.top &&
+                           eyePosition.y <= zombieRect.bottom;
+        
+        setEyeContactDetected(isLookingAt);
+        
+        if (isLookingAt && !eyeContactIntervalRef.current) {
+          // Start counting duration of eye contact
+          let duration = 0;
+          eyeContactIntervalRef.current = setInterval(() => {
+            duration += 100;
+            setEyeContactDuration(duration);
             
-            // Apply effects based on game mode
-            if (gameMode === 'survival') {
-              // In survival, increase power level (making it harder to win)
-              setPowerLevel(prev => Math.min(prev + 3, 100));
-            } else {
-              // In other modes, reduce score
-              setScore(prev => Math.max(prev - 2, 0));
-            }
-            
-            // Reduce Silver's attributes
-            if (silverChar) {
+            // Every 1000ms (1 second) of eye contact, apply negative effects
+            if (duration % 1000 === 0) {
+              // Show visual effect
+              setShowEyeContactEffect(true);
+              setTimeout(() => setShowEyeContactEffect(false), 300);
+              
+              // Apply effects based on game mode
+              if (gameMode === 'survival') {
+                // In survival, increase power level (making it harder to win)
+                setPowerLevel(prev => Math.min(prev + 3, 100));
+              } else {
+                // In other modes, reduce score
+                setScore(prev => Math.max(prev - 2, 0));
+              }
+              
+              // Reduce Silver's attributes
               setSilverChar(prev => {
                 if (!prev) return prev;
                 return {
@@ -248,104 +255,26 @@ const SilverGame: React.FC = () => {
                 };
               });
             }
-          }
-        }, 100);
-      }
-    } else {
-      // Stop counting duration when not looking
-      if (eyeContactIntervalRef.current) {
-        clearInterval(eyeContactIntervalRef.current);
-        eyeContactIntervalRef.current = null;
-        setEyeContactDuration(0);
-      }
-    }
-  }, [silverChar, gameState, gameMode, eyeTrackingDebug]);
-  
-  // Initialize MediaPipe eye tracking
-  const setupEyeTracking = useCallback(async () => {
-    setEyeTrackingInitializing(true);
-    setCameraPermissionError(null);
-    
-    try {
-      console.log('Setting up MediaPipe eye tracking...');
-      
-      const initialized = await MediaPipeEyeTracker.initialize({
-        onEyeContact: (isLookingAt: boolean, gazeX?: number, gazeY?: number) => {
-          handleEyeContact(isLookingAt, gazeX, gazeY);
-        },
-        onInitialized: () => {
-          setCameraAccessGranted(true);
-          setCameraPermissionError(null);
-          setEyeTrackingInitializing(false);
-          console.log('✓ MediaPipe eye tracking initialized successfully');
-        },
-        onError: (error: { message: string }) => {
-          console.error('✗ MediaPipe eye tracking error:', error);
-          setCameraAccessGranted(false);
-          setCameraPermissionError(error.message);
-          setEyeTrackingInitializing(false);
-        },
-        onDetection: (detections: FaceDetection[]) => {
-          // Update face detection stats for debug display
-          if (eyeTrackingDebug) {
-            setFaceDetectionStats(prev => ({
-              ...prev,
-              facesDetected: detections.length
-            }));
-          }
-            
-          // If we have faces detected, update stats
-          if (detections.length > 0) {
-            const detection = detections[0];
-            setFaceDetected(true);
-            
-            // Calculate distance from face coords to target if available
-            if (zombieEyesRef.current) {
-              const targetRect = zombieEyesRef.current.getBoundingClientRect();
-              const targetCenter = {
-                x: targetRect.left + targetRect.width / 2,
-                y: targetRect.top + targetRect.height / 2
-              };
-              
-              // Simple distance calculation (this might need adjustment based on coordinate systems)
-              const distance = Math.sqrt(
-                Math.pow(detection.faceCoords[0] - targetCenter.x, 2) + 
-                Math.pow(detection.faceCoords[1] - targetCenter.y, 2)
-              );
-              
-              setEyeDistance(distance);
-              if (eyeTrackingDebug) {
-                setFaceDetectionStats(prev => ({
-                  ...prev,
-                  distance: Math.round(distance)
-                }));
-              }
-            }
-          } else {
-            setFaceDetected(false);
-          }
+          }, 100);
+        } else if (!isLookingAt && eyeContactIntervalRef.current) {
+          // Stop counting when not looking
+          clearInterval(eyeContactIntervalRef.current);
+          eyeContactIntervalRef.current = null;
+          setEyeContactDuration(0);
         }
-      }, {
-        debug: eyeTrackingDebug,
-        videoSize: {
-          width: 320,
-          height: 240
-        },
-        threshold: eyeThreshold
-      });
-      
-      if (!initialized) {
-        console.warn('✗ Failed to initialize MediaPipe eye tracking');
-        setCameraPermissionError('MediaPipe eye tracking initialization failed');
-        setEyeTrackingInitializing(false);
       }
-    } catch (error: any) {
-      console.error('✗ Error setting up MediaPipe eye tracking:', error);
-      setCameraPermissionError(error.message || 'Failed to set up MediaPipe eye tracking');
-      setEyeTrackingInitializing(false);
-      setCameraAccessGranted(false);
+    } else if (eyeContactIntervalRef.current) {
+      // Clear interval if conditions aren't met
+      clearInterval(eyeContactIntervalRef.current);
+      eyeContactIntervalRef.current = null;
+      setEyeContactDuration(0);
+      setEyeContactDetected(false);
     }
-  }, [handleEyeContact, eyeTrackingDebug, eyeThreshold]);
+  }, [isEyesOnScreen, eyeTrackingActive, eyePosition, silverChar, gameState, gameMode, isGreatLexiconActive]);
+  // Update sensitivity when gazeSensitivity changes
+  useEffect(() => {
+    setSensitivity(gazeSensitivity);
+  }, [gazeSensitivity, setSensitivity]);
 
   const fetchWords = useCallback(async () => {
     try {
@@ -373,8 +302,8 @@ const SilverGame: React.FC = () => {
   const handleZombieAppearance = useCallback(() => {
     if (gameState !== 'playing' || !gameContainerRef.current) return;
 
-    // Don't trigger attacks in creative mode
-    if (gameMode === 'creative') return;
+    // Don't trigger attacks in creative mode or when GREAT LEXICON is active
+    if (gameMode === 'creative' || isGreatLexiconActive) return;
 
     // Silver's supernatural abilities sequence
     const abilities = ['teleport', 'laser_eyes', 'cannons', 'slowness_potion', 'sheikers'];
@@ -399,7 +328,7 @@ const SilverGame: React.FC = () => {
       default:
         handleRegularAttack();
     }
-  }, [gameState, gameMode, words]);
+  }, [gameState, gameMode, words, isGreatLexiconActive]);
 
   // Teleportation attack
   const handleTeleportAttack = useCallback(() => {
@@ -569,8 +498,8 @@ const SilverGame: React.FC = () => {
   const applyAttackDamage = useCallback((attack: { targetIndex: number; timestamp: number; damage: number }) => {
     if (gameState !== 'playing') return;
     
-    // Apply different effects based on game mode
-    if (gameMode === 'survival') {
+    // Apply different effects based on game mode (unless GREAT LEXICON is active)
+    if (gameMode === 'survival' && !isGreatLexiconActive) {
       setPowerLevel(prev => Math.min(prev + attack.damage, 100));
     } else {
       setScore(prev => Math.max(prev - attack.damage, 0));
@@ -579,7 +508,7 @@ const SilverGame: React.FC = () => {
     // Reset targeted word
     setTargetedWordIndex(null);
     setZombieAttacks(prev => prev.filter(a => a.timestamp !== attack.timestamp));
-  }, [gameState, gameMode]);
+  }, [gameState, gameMode, isGreatLexiconActive]);
 
   const initiateZombieAttack = useCallback(() => {
     if (words.length === 0 || gameState !== 'playing') return;
@@ -615,8 +544,8 @@ const SilverGame: React.FC = () => {
     // Cancel if the game is no longer playing
     if (gameState !== 'playing') return;
     
-    // Apply different effects based on game mode
-    if (gameMode === 'survival') {
+    // Apply different effects based on game mode (unless GREAT LEXICON is active)
+    if (gameMode === 'survival' && !isGreatLexiconActive) {
       // In survival mode, increase power level (making it harder to win)
       setPowerLevel(prev => Math.min(prev + attack.damage, 100));
     } else {
@@ -629,7 +558,7 @@ const SilverGame: React.FC = () => {
     
     // Remove the attack from the queue
     setZombieAttacks(prev => prev.filter(a => a.timestamp !== attack.timestamp));
-  }, [gameState, gameMode]);
+  }, [gameState, gameMode, isGreatLexiconActive]);
 
   // Set up recurring zombie attacks (sliver is always visible)
   useEffect(() => {
@@ -673,21 +602,10 @@ const SilverGame: React.FC = () => {
       if (eyeContactIntervalRef.current) {
         clearInterval(eyeContactIntervalRef.current);
       }
-      // Keep eye tracking active if camera is available
-      if (!eyeTrackingActive && cameraAccessGranted) {
-        setEyeTrackingActive(true);
-      }
+      // Eye tracking is now managed by the hook
     }
   }, [gameState, eyeTrackingActive, cameraAccessGranted]);
   
-  // Load saved threshold from localStorage on component mount
-  useEffect(() => {
-    const savedThreshold = localStorage.getItem('eyeTrackingThreshold');
-    if (savedThreshold) {
-      const thresholdValue = parseInt(savedThreshold);
-      setEyeThreshold(thresholdValue);
-    }
-  }, []);
   
   // Eye tracking for player position (fallback to mouse if no eye tracking)
   useEffect(() => {
@@ -720,7 +638,7 @@ const SilverGame: React.FC = () => {
   
   // Proximity detection and Linther poison effect
   useEffect(() => {
-    if (gameState !== 'playing' || !showZombie) return;
+    if (gameState !== 'playing' || !showZombie || isGreatLexiconActive) return;
     
     // Calculate distance to Silver
     const dx = playerPosition.x - zombiePosition.x;
@@ -750,11 +668,11 @@ const SilverGame: React.FC = () => {
         setHungerDecayRate(1);
       }
     }
-  }, [playerPosition, zombiePosition, gameState, showZombie, isLintherPoisoned]);
+  }, [playerPosition, zombiePosition, gameState, showZombie, isLintherPoisoned, isGreatLexiconActive]);
   
   // Apply hunger decay with Linther effect
   useEffect(() => {
-    if (gameState !== 'playing' || !silverChar) return;
+    if (gameState !== 'playing' || !silverChar || isGreatLexiconActive) return;
     
     const hungerInterval = setInterval(() => {
       setSilverChar(prev => {
@@ -784,112 +702,32 @@ const SilverGame: React.FC = () => {
     }, 1000); // Update every second
     
     return () => clearInterval(hungerInterval);
-  }, [gameState, silverChar, hungerDecayRate, isLintherPoisoned, lintherPoisonLevel]);
+  }, [gameState, silverChar, hungerDecayRate, isLintherPoisoned, lintherPoisonLevel, isGreatLexiconActive]);
 
-  // Update MediaPipe EyeTracker threshold when eyeThreshold state changes
-  useEffect(() => {
-    if (eyeTrackingActive) {
-      MediaPipeEyeTracker.setThreshold(eyeThreshold);
-    }
-  }, [eyeThreshold, eyeTrackingActive]);
   
-  // Update camera view visibility
-  useEffect(() => {
-    MediaPipeEyeTracker.setDebugViewVisible(showCameraView);
-  }, [showCameraView]);
   
-  // Update camera view position
-  useEffect(() => {
-    MediaPipeEyeTracker.setDebugViewPosition(cameraViewPosition.x, cameraViewPosition.y);
-  }, [cameraViewPosition]);
-  
-  // Handle camera view dragging
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDraggingCamera) {
-        const deltaX = e.clientX - dragStartPos.x;
-        const deltaY = e.clientY - dragStartPos.y;
-        setCameraViewPosition(prev => ({
-          x: prev.x + deltaX,
-          y: prev.y + deltaY
-        }));
-        setDragStartPos({ x: e.clientX, y: e.clientY });
-      }
-    };
-    
-    const handleMouseUp = () => {
-      setIsDraggingCamera(false);
-    };
-    
-    if (isDraggingCamera) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDraggingCamera, dragStartPos]);
-  
-  // Add mousedown listener to camera debug container
-  useEffect(() => {
-    const debugContainer = MediaPipeEyeTracker.getDebugContainer();
-    if (debugContainer) {
-      const handleMouseDown = (e: MouseEvent) => {
-        setIsDraggingCamera(true);
-        setDragStartPos({ x: e.clientX, y: e.clientY });
-        e.preventDefault();
-      };
-      
-      debugContainer.addEventListener('mousedown', handleMouseDown);
-      return () => {
-        debugContainer.removeEventListener('mousedown', handleMouseDown);
-      };
-    }
-  }, [cameraAccessGranted]);
 
-  // Reinitialize eye tracking when debug mode changes
+  // Start eye tracking with target element when zombie is visible
   useEffect(() => {
-    if (cameraAccessGranted) {
-      // Only reinitialize if camera was already working
-      console.log('Debug mode changed, reinitializing MediaPipe eye tracking...');
-      MediaPipeEyeTracker.cleanup();
-      setCameraAccessGranted(false);
-      setupEyeTracking();
+    if (showZombie && zombieEyesRef.current) {
+      startTracking();
     }
-  }, [eyeTrackingDebug, setupEyeTracking]);
-
-  // Start eye tracking when camera access is granted (sliver is always visible)
-  useEffect(() => {
-    if (cameraAccessGranted && zombieEyesRef.current && showZombie) {
-      // Add a small delay to ensure initialization is completely finished
-      setTimeout(() => {
-        if (zombieEyesRef.current) {
-          console.log('Starting MediaPipe eye tracking with target element...');
-          const success = MediaPipeEyeTracker.startTracking(zombieEyesRef.current);
-          setEyeTrackingActive(success);
-          if (success) {
-            console.log('✓ MediaPipe eye tracking target set successfully');
-          } else {
-            console.error('✗ Failed to set MediaPipe eye tracking target');
-          }
-        }
-      }, 100); // 100ms delay to ensure initialization is complete
-    }
-  }, [cameraAccessGranted, showZombie]);
-
-  // Initialize eye tracking on component mount
-  useEffect(() => {
-    setupEyeTracking();
     
     return () => {
-      // Clean up eye tracking on component unmount
-      MediaPipeEyeTracker.cleanup();
       if (eyeContactIntervalRef.current) {
         clearInterval(eyeContactIntervalRef.current);
       }
     };
-  }, [setupEyeTracking]);
+  }, [showZombie, startTracking]);
+
+  // Pause game when GREAT LEXICON is active
+  useEffect(() => {
+    if (isGreatLexiconActive && gameState === 'playing') {
+      console.log('GREAT LEXICON ACTIVE - Pausing game!');
+      // You could set a paused state here if needed
+      // For now, we'll just prevent game actions in other effects
+    }
+  }, [isGreatLexiconActive, gameState]);
 
   return (
     <div className="game-container" ref={gameContainerRef}>
@@ -1130,27 +968,6 @@ const SilverGame: React.FC = () => {
             onChange={e => setEyeTrackingDebug(e.target.checked)} 
           />
         </div>
-        {eyeTrackingDebug && (
-          <div>
-            <label>Show Camera View:</label>
-            <input 
-              type="checkbox" 
-              checked={showCameraView} 
-              onChange={e => setShowCameraView(e.target.checked)} 
-            />
-          </div>
-        )}
-        <div>
-          <label>Eye Tracking Threshold:</label>
-          <input 
-            type="range" 
-            min="50" 
-            max="150" 
-            value={eyeThreshold} 
-            onChange={e => setEyeThreshold(parseInt(e.target.value))} 
-          />
-          <span>{eyeThreshold}</span>
-        </div>
         {eyeTrackingActive && (
           <div>
             <label>Gaze Sensitivity:</label>
@@ -1167,27 +984,26 @@ const SilverGame: React.FC = () => {
         )}
       </div>
       
-      {/* Camera Permission Status */}
+      {/* Eye Tracking Status */}
       <div className="camera-status" style={{ 
         marginTop: '10px', 
         padding: '10px', 
-        border: `2px solid ${cameraAccessGranted ? '#4CAF50' : '#f44336'}`,
+        border: `2px solid ${eyeTrackingActive ? '#4CAF50' : '#f44336'}`,
         borderRadius: '8px',
-        backgroundColor: cameraAccessGranted ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'
+        backgroundColor: eyeTrackingActive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'
       }}>
-        <h4>Camera Status:</h4>
-        {eyeTrackingInitializing ? (
-          <div style={{ color: '#ff9800' }}>
-            🔄 Initializing camera and face detection...
-          </div>
-        ) : cameraAccessGranted ? (
+        <h4>Eye Tracking Status:</h4>
+        {eyeTrackingActive ? (
           <div style={{ color: '#4CAF50' }}>
-            ✅ Camera access granted - Face detection active
-            {eyeTrackingDebug && (
+            ✅ Eye tracking active - {isEyesOnScreen ? 'Eyes detected' : 'Eyes not detected'}
+            {isGreatLexiconActive && (
+              <div style={{ color: '#ff0000', fontWeight: 'bold', marginTop: '5px' }}>
+                ⚠️ GREAT LEXICON ACTIVE - Look at the screen!
+              </div>
+            )}
+            {eyeTrackingDebug && eyePosition && (
               <div style={{ marginTop: '5px', fontSize: '0.8rem' }}>
-                Faces detected: {faceDetectionStats.facesDetected} | 
-                Distance: {faceDetectionStats.distance}px | 
-                Looking: {faceDetectionStats.isLooking ? '👁️' : '👀'} |
+                Eye Position: ({eyePosition.x.toFixed(0)}, {eyePosition.y.toFixed(0)}) |
                 Gaze: ({gazePosition.x.toFixed(0)}, {gazePosition.y.toFixed(0)})
               </div>
             )}
@@ -1195,15 +1011,10 @@ const SilverGame: React.FC = () => {
         ) : (
           <div>
             <div style={{ color: '#f44336', marginBottom: '10px' }}>
-              ❌ Camera access required for face tracking
+              ❌ Eye tracking not active
             </div>
-            {cameraPermissionError && (
-              <div style={{ color: '#f44336', fontSize: '0.8rem', marginBottom: '10px' }}>
-                Error: {cameraPermissionError}
-              </div>
-            )}
             <button 
-              onClick={setupEyeTracking}
+              onClick={startTracking}
               style={{
                 backgroundColor: '#2196F3',
                 color: 'white',
@@ -1213,11 +1024,8 @@ const SilverGame: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              📷 Enable Camera Access
+              👁️ Start Eye Tracking
             </button>
-            <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#666' }}>
-              Click "Enable Camera Access" and allow camera permission when prompted by your browser.
-            </div>
           </div>
         )}
       </div>
@@ -1443,6 +1251,37 @@ const SilverGame: React.FC = () => {
               }}
             />
           ))}
+        </div>
+      )}
+      
+      {/* GREAT LEXICON overlay */}
+      {isGreatLexiconActive && (
+        <div 
+          className="great-lexicon-overlay"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            animation: 'pulse 2s ease-in-out infinite'
+          }}
+        >
+          <div style={{
+            textAlign: 'center',
+            color: '#ff0000',
+            textShadow: '0 0 20px #ff0000, 0 0 40px #ff0000',
+            animation: 'float 3s ease-in-out infinite'
+          }}>
+            <h1 style={{ fontSize: '4rem', marginBottom: '1rem' }}>GREAT LEXICON ACTIVATED</h1>
+            <p style={{ fontSize: '2rem' }}>LOOK AT THE SCREEN!</p>
+            <p style={{ fontSize: '1.5rem', marginTop: '2rem' }}>Game paused until you return your gaze...</p>
+          </div>
         </div>
       )}
     </div>

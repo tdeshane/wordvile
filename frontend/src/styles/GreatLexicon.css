@@ -1,0 +1,320 @@
+/* GREAT LEXICON Overlay Styles */
+.great-lexicon-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-to-black 0.5s ease-out;
+  overflow: hidden;
+}
+
+@keyframes fade-to-black {
+  from {
+    background: transparent;
+  }
+  to {
+    background: #000000;
+  }
+}
+
+/* Void effect background */
+.void-effect {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, 
+    transparent 0%, 
+    rgba(138, 43, 226, 0.1) 30%, 
+    rgba(75, 0, 130, 0.2) 60%, 
+    rgba(0, 0, 0, 1) 100%);
+  animation: void-pulse 4s ease-in-out infinite;
+}
+
+@keyframes void-pulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+}
+
+/* Main content */
+.lexicon-content {
+  position: relative;
+  text-align: center;
+  z-index: 10;
+  max-width: 800px;
+  padding: 40px;
+}
+
+/* Rotating symbol */
+.lexicon-symbol {
+  margin-bottom: 30px;
+}
+
+.rotating-glyph {
+  width: 150px;
+  height: 150px;
+  animation: rotate-glyph 10s linear infinite;
+}
+
+.rotating-glyph text {
+  fill: #8b00ff;
+  font-size: 100px;
+  filter: drop-shadow(0 0 20px #8b00ff);
+}
+
+@keyframes rotate-glyph {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Title with glitch effect */
+.lexicon-title {
+  font-size: 60px;
+  font-weight: 900;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  margin-bottom: 30px;
+  position: relative;
+  text-shadow: 
+    0 0 10px #8b00ff,
+    0 0 20px #8b00ff,
+    0 0 30px #8b00ff;
+}
+
+.glitch {
+  animation: glitch 2s infinite;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  animation: glitch-1 0.5s infinite;
+  color: #ff00ff;
+  z-index: -1;
+}
+
+.glitch::after {
+  animation: glitch-2 0.5s infinite;
+  color: #00ffff;
+  z-index: -2;
+}
+
+@keyframes glitch {
+  0%, 100% {
+    text-shadow: 
+      0 0 10px #8b00ff,
+      0 0 20px #8b00ff,
+      0 0 30px #8b00ff;
+  }
+  20% {
+    text-shadow: 
+      2px 2px 10px #ff00ff,
+      -2px -2px 20px #00ffff,
+      0 0 30px #8b00ff;
+  }
+}
+
+@keyframes glitch-1 {
+  0%, 100% {
+    clip: rect(44px, 9999px, 56px, 0);
+    transform: translate(0);
+  }
+  20% {
+    clip: rect(20px, 9999px, 90px, 0);
+    transform: translate(-2px, -2px);
+  }
+}
+
+@keyframes glitch-2 {
+  0%, 100% {
+    clip: rect(60px, 9999px, 85px, 0);
+    transform: translate(0);
+  }
+  20% {
+    clip: rect(0px, 9999px, 45px, 0);
+    transform: translate(2px, 2px);
+  }
+}
+
+/* Warning text */
+.warning-text {
+  font-size: 24px;
+  margin: 20px 0;
+  font-family: monospace;
+  min-height: 30px;
+}
+
+.warning-text p {
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.warning-level-1 { color: #ffff00; }
+.warning-level-2 { color: #ff9900; }
+.warning-level-3 { color: #ff6600; }
+.warning-level-4 { color: #ff3300; }
+.warning-level-5 { 
+  color: #ff0000;
+  animation: critical-flash 0.5s ease-in-out infinite;
+}
+
+@keyframes critical-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Corruption meter */
+.corruption-meter {
+  margin: 40px auto;
+  max-width: 400px;
+}
+
+.corruption-label {
+  color: #8b00ff;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.corruption-bar {
+  height: 20px;
+  background: rgba(139, 0, 255, 0.2);
+  border: 2px solid #8b00ff;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.corruption-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b00ff, #ff00ff);
+  transition: width 1s ease-out;
+  box-shadow: 0 0 20px #ff00ff;
+}
+
+.corruption-percentage {
+  color: #ff00ff;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* Critical warning */
+.critical-warning {
+  background: rgba(255, 0, 0, 0.2);
+  border: 2px solid #ff0000;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 30px 0;
+  animation: critical-pulse 1s ease-in-out infinite;
+}
+
+.critical-warning p {
+  color: #ffffff;
+  margin: 5px 0;
+  font-size: 18px;
+}
+
+@keyframes critical-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.8);
+  }
+}
+
+/* Lexicon messages */
+.lexicon-messages {
+  margin-top: 40px;
+}
+
+.lexicon-messages p {
+  color: #8b00ff;
+  font-size: 16px;
+  margin: 10px 0;
+  opacity: 0;
+  letter-spacing: 2px;
+}
+
+.fade-in-1 {
+  animation: fade-in 2s ease-out 1s forwards;
+}
+
+.fade-in-2 {
+  animation: fade-in 2s ease-out 2s forwards;
+}
+
+.fade-in-3 {
+  animation: fade-in 2s ease-out 3s forwards;
+}
+
+.fade-in-4 {
+  animation: fade-in 2s ease-out 4s forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Static noise overlay */
+.static-noise {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.03;
+  z-index: 1;
+  pointer-events: none;
+  background-image: 
+    repeating-radial-gradient(circle at 0 0, transparent 0, #ffffff 1px, transparent 1px, transparent 2px),
+    repeating-radial-gradient(circle at 50% 50%, transparent 0, #ffffff 1px, transparent 1px, transparent 2px);
+  background-size: 50px 50px;
+  animation: static-move 0.2s steps(10) infinite;
+}
+
+@keyframes static-move {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(50px, 50px);
+  }
+}
+
+/* Global body class when GREAT LEXICON is active */
+body.great-lexicon-active {
+  overflow: hidden;
+  cursor: none;
+}
