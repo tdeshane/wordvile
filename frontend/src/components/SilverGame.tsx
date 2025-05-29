@@ -7,10 +7,14 @@ import '../styles/SilverZombieDebug.css';
 import '../styles/SilverEyeTracking.css';
 import '../styles/SilverEnhanced.css';
 import '../styles/CreatureSystem.css';
+import '../styles/GameItems.css';
 import { useEyeTracking } from '../hooks/useEyeTracking';
 import { useCreatureManager } from '../hooks/useCreatureManager';
+import { useItemManager } from '../hooks/useItemManager';
 import { CreatureDisplay } from './CreatureDisplay';
+import { GameItem } from './GameItem';
 import { Creature } from '../types/creatures';
+import { GameItem as GameItemType } from '../types/gameItems';
 
 interface Word {
   word: string;
@@ -98,11 +102,11 @@ const SilverGame: React.FC = () => {
   
   // Creature system states
   const [playerExperience, setPlayerExperience] = useState(0);
+  const [playerPosition, setPlayerPosition] = useState({ x: 300, y: 300 });
   const [playerLevel, setPlayerLevel] = useState(1);
   const [creatureDefeatCount, setCreatureDefeatCount] = useState(0);
   
   // Player and Linther poison states
-  const [playerPosition, setPlayerPosition] = useState({ x: 400, y: 300 });
   const [isLintherPoisoned, setIsLintherPoisoned] = useState(false);
   const [lintherPoisonLevel, setLintherPoisonLevel] = useState(0);
   const [hungerDecayRate, setHungerDecayRate] = useState(1); // Normal decay rate
@@ -144,6 +148,9 @@ const SilverGame: React.FC = () => {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
+  // Initialize items state first
+  const [items, setItems] = useState<GameItemType[]>([]);
+
   // Creature management hook
   const {
     activeCreatures,
@@ -153,6 +160,7 @@ const SilverGame: React.FC = () => {
     gameState,
     gameMode,
     words,
+    items,
     containerRef: gameContainerRef as React.RefObject<HTMLDivElement>,
     onCreatureAttack: (damage: number, creatureId: string) => {
       // Handle creature attacks similar to zombie attacks
@@ -180,6 +188,40 @@ const SilverGame: React.FC = () => {
   const handleCreatureClick = useCallback((spawnTime: number) => {
     defeatCreature(spawnTime);
   }, [defeatCreature]);
+  
+  // Item management
+  const itemManager = useItemManager({
+    gameState,
+    containerRef: gameContainerRef as React.RefObject<HTMLDivElement>,
+    activeCreatures,
+    playerPosition,
+    onItemCollected: (item: GameItemType) => {
+      // Handle item collection
+      setScore(prev => prev + item.value);
+      if (item.type === 'health_potion' && gameMode === 'survival') {
+        setPowerLevel(prev => Math.max(prev - 20, 0)); // Heal in survival mode
+      }
+      if (item.type === 'respawn_token') {
+        // Store respawn token logic here
+        console.log('Respawn token collected!');
+      }
+    },
+    onPlayerHit: (damage: number) => {
+      // Handle player being hit by Clanger
+      if (gameMode === 'survival') {
+        setPowerLevel(prev => Math.min(prev + damage, 100));
+      } else {
+        setScore(prev => Math.max(prev - damage, 0));
+      }
+    }
+  });
+
+  // Update items state when itemManager changes
+  useEffect(() => {
+    setItems(itemManager.items);
+  }, [itemManager.items]);
+  
+  const { spawnItem, collectItem, showPlayer, setShowPlayer } = itemManager;
 
   // Update gaze position based on eye tracking
   useEffect(() => {
@@ -924,6 +966,47 @@ const SilverGame: React.FC = () => {
         />
       ))}
       
+      {/* Render game items */}
+      {itemManager.items.map(item => (
+        <GameItem
+          key={item.id}
+          item={item}
+          onClick={() => collectItem(item.id)}
+        />
+      ))}
+      
+      {/* Render player indicator */}
+      {showPlayer && (
+        <div 
+          className="player-indicator"
+          style={{
+            left: `${playerPosition.x}px`,
+            top: `${playerPosition.y}px`
+          }}
+          onMouseDown={(e) => {
+            const startX = e.clientX - playerPosition.x;
+            const startY = e.clientY - playerPosition.y;
+            
+            const handleMouseMove = (e: MouseEvent) => {
+              setPlayerPosition({
+                x: e.clientX - startX,
+                y: e.clientY - startY
+              });
+            };
+            
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+        >
+          P
+        </div>
+      )}
+      
       {showDamageOverlay && targetedWordIndex !== null && (
         <div className="damage-overlay">
           -{words[targetedWordIndex].points}
@@ -949,6 +1032,78 @@ const SilverGame: React.FC = () => {
         <button onClick={fetchSilverData} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh Silver Data'}
         </button>
+        
+        {/* Debug controls to spawn new creatures */}
+        <div className="debug-creature-spawn" style={{ marginTop: '10px' }}>
+          <button 
+            onClick={() => spawnCreature('money_hater')} 
+            style={{ backgroundColor: '#2f4f2f', color: 'white', margin: '2px' }}
+          >
+            Spawn Money Hater
+          </button>
+          <button 
+            onClick={() => spawnCreature('clanger')} 
+            style={{ backgroundColor: '#ffd700', color: 'black', margin: '2px' }}
+          >
+            Spawn Clanger
+          </button>
+          <button 
+            onClick={() => spawnCreature('glitch')} 
+            style={{ backgroundColor: '#ff00ff', color: 'white', margin: '2px' }}
+          >
+            Spawn Glitch
+          </button>
+        </div>
+        
+        {/* Debug controls to spawn legendary creatures */}
+        <div className="debug-legendary-spawn" style={{ marginTop: '10px' }}>
+          <button 
+            onClick={() => spawnCreature('the_great_lexicon')} 
+            style={{ backgroundColor: '#FFD700', color: '#4B0082', margin: '2px', fontWeight: 'bold' }}
+          >
+            Spawn GREAT LEXICON
+          </button>
+          <button 
+            onClick={() => spawnCreature('silver_hero')} 
+            style={{ backgroundColor: '#C0C0C0', color: 'black', margin: '2px' }}
+          >
+            Spawn Silver
+          </button>
+          <button 
+            onClick={() => spawnCreature('synonym_dragon')} 
+            style={{ backgroundColor: '#FF6347', color: 'white', margin: '2px' }}
+          >
+            Spawn Synonym Dragon
+          </button>
+          <button 
+            onClick={() => spawnCreature('mind_poisoner')} 
+            style={{ backgroundColor: '#8B008B', color: 'white', margin: '2px' }}
+          >
+            Spawn Mind Poisoner
+          </button>
+        </div>
+        
+        {/* Debug controls to spawn items */}
+        <div className="debug-item-spawn" style={{ marginTop: '10px' }}>
+          <button 
+            onClick={() => spawnItem('coin')} 
+            style={{ backgroundColor: '#ffd700', color: 'black', margin: '2px' }}
+          >
+            Spawn Coin
+          </button>
+          <button 
+            onClick={() => spawnItem('diamond')} 
+            style={{ backgroundColor: '#b9f2ff', color: 'black', margin: '2px' }}
+          >
+            Spawn Diamond
+          </button>
+          <button 
+            onClick={() => spawnItem('respawn_token')} 
+            style={{ backgroundColor: '#90ee90', color: 'black', margin: '2px' }}
+          >
+            Spawn Token
+          </button>
+        </div>
       </div>
       
       <div className="settings">

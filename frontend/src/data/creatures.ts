@@ -1,4 +1,6 @@
 import { Creature } from '../types/creatures';
+import { WORDVILE_LEGENDS } from './wordvileLegends';
+import { ALL_WORDVILE_CREATURES } from './wordvileCreatures';
 
 // Undead Creatures
 export const ZOMBIE_VARIANTS: Creature[] = [
@@ -686,6 +688,124 @@ export const WORDVILE_CREATURES: Creature[] = [
   }
 ];
 
+// Silver's Challenge Creatures
+export const SILVER_CHALLENGE_CREATURES: Creature[] = [
+  {
+    id: 'money_hater',
+    name: 'Money Hater',
+    type: 'money_hater',
+    category: 'aberration',
+    stats: { health: 60, maxHealth: 60, attack: 25, defense: 5, speed: 5, intelligence: 4 },
+    abilities: [
+      { name: 'Value Devour', cost: 0, damage: 20, effect: 'destroys valuables', description: 'Consumes and destroys items of value' },
+      { name: 'Wealth Drain', cost: 15, damage: 25, effect: 'steals resources', description: 'Drains money, gold, and respawn tokens' },
+      { name: 'Greed Frenzy', cost: 20, damage: 30, effect: 'area damage', description: 'Destroys all nearby valuable items' }
+    ],
+    appearance: {
+      size: { width: 90, height: 100 },
+      primaryColor: '#2f4f2f',
+      secondaryColor: '#8b4513',
+      aura: 'consuming darkness',
+      glowEffect: true,
+      animationType: 'walk'
+    },
+    behavior: {
+      aggression: 'aggressive',
+      intelligence: 'smart',
+      movementPattern: 'hunt',
+      attackPattern: 'special',
+      spawnRate: 35,
+      maxCount: 2
+    },
+    rarity: 'rare',
+    description: 'Voracious creature that consumes all things of value',
+    dialogue: [
+      'Money... must destroy!',
+      'Value means nothing!',
+      'Consume all wealth!',
+      'Your treasures are mine to devour!'
+    ],
+    dropItems: ['void essence', 'anti-value shard'],
+    experienceReward: 45
+  },
+  {
+    id: 'clanger',
+    name: 'Clanger',
+    type: 'clanger',
+    category: 'construct',
+    stats: { health: 80, maxHealth: 80, attack: 35, defense: 8, speed: 3, intelligence: 2 },
+    abilities: [
+      { name: 'Cymbal Crash', cost: 0, damage: 35, effect: 'stun', description: 'Smashes player between massive cymbals' },
+      { name: 'Sonic Boom', cost: 20, damage: 40, effect: 'area damage', description: 'Creates devastating sound wave' },
+      { name: 'Metallic Resonance', cost: 15, effect: 'defense boost', description: 'Vibrating metal increases defense' }
+    ],
+    appearance: {
+      size: { width: 120, height: 140 },
+      primaryColor: '#ffd700',
+      secondaryColor: '#cd7f32',
+      aura: 'sound waves',
+      glowEffect: true,
+      animationType: 'walk'
+    },
+    behavior: {
+      aggression: 'hostile',
+      intelligence: 'basic',
+      movementPattern: 'patrol',
+      attackPattern: 'melee',
+      spawnRate: 45,
+      maxCount: 1
+    },
+    rarity: 'rare',
+    description: 'Massive musical construct that crushes victims with cymbals',
+    dialogue: [
+      'CLANG! CLANG!',
+      'The music of destruction!',
+      'CRASH!!!',
+      'Feel the rhythm of pain!'
+    ],
+    dropItems: ['brass shard', 'resonance crystal', 'cymbal piece'],
+    experienceReward: 55
+  },
+  {
+    id: 'glitch',
+    name: 'Little Glitch',
+    type: 'glitch',
+    category: 'aberration',
+    stats: { health: 15, maxHealth: 15, attack: 18, defense: 1, speed: 9, intelligence: 5 },
+    abilities: [
+      { name: 'Reality Distort', cost: 0, damage: 12, effect: 'confusion', description: 'Makes objects behave erratically' },
+      { name: 'Code Corruption', cost: 10, damage: 18, effect: 'disrupts abilities', description: 'Corrupts target abilities' },
+      { name: 'Glitch Swarm', cost: 15, damage: 25, effect: 'multiplies', description: 'Creates temporary glitch copies' }
+    ],
+    appearance: {
+      size: { width: 40, height: 35 },
+      primaryColor: '#ff00ff',
+      secondaryColor: '#00ff00',
+      aura: 'digital static',
+      glowEffect: true,
+      animationType: 'teleport'
+    },
+    behavior: {
+      aggression: 'aggressive',
+      intelligence: 'smart',
+      movementPattern: 'swarm',
+      attackPattern: 'special',
+      spawnRate: 15,
+      maxCount: 5
+    },
+    rarity: 'uncommon',
+    description: 'Small digital aberrations that corrupt reality itself',
+    dialogue: [
+      '01001010101!',
+      'ERR0R! ERR0R!',
+      'C0RRUPT3D!',
+      'GL1TCH 1N TH3 M4TR1X!'
+    ],
+    dropItems: ['corrupted data', 'glitch fragment', 'error code'],
+    experienceReward: 20
+  }
+];
+
 // Combine all creatures
 export const ALL_CREATURES: Creature[] = [
   ...ZOMBIE_VARIANTS,
@@ -694,7 +814,10 @@ export const ALL_CREATURES: Creature[] = [
   ...DRAGON_VARIANTS,
   ...MAGICAL_CREATURES,
   ...MONSTER_VARIANTS,
-  ...WORDVILE_CREATURES
+  ...WORDVILE_CREATURES,
+  ...SILVER_CHALLENGE_CREATURES,
+  ...WORDVILE_LEGENDS,
+  ...ALL_WORDVILE_CREATURES
 ];
 
 // Creature lookup functions
@@ -717,4 +840,44 @@ export const getCreaturesByRarity = (rarity: string): Creature[] => {
 export const getRandomCreature = (filterFn?: (creature: Creature) => boolean): Creature => {
   const filtered = filterFn ? ALL_CREATURES.filter(filterFn) : ALL_CREATURES;
   return filtered[Math.floor(Math.random() * filtered.length)];
+};
+
+// Rarity-based spawn weights
+const RARITY_WEIGHTS = {
+  'common': 100,
+  'uncommon': 50,
+  'rare': 25,
+  'epic': 10,
+  'legendary': 5,
+  'mythical': 3,
+  'divine': 2,
+  'extreme': 1,
+  'universe': 0.5,
+  'multiversal': 0.25,
+  'all_realm_power': 0.1,
+  'beyond_all_classifications': 0.05,
+  'incomprehensible': 0.01
+};
+
+export const getRandomCreatureByRarity = (filterFn?: (creature: Creature) => boolean): Creature => {
+  const filtered = filterFn ? ALL_CREATURES.filter(filterFn) : ALL_CREATURES;
+  
+  // Calculate total weight
+  const totalWeight = filtered.reduce((sum, creature) => {
+    return sum + (RARITY_WEIGHTS[creature.rarity] || 1);
+  }, 0);
+  
+  // Random number between 0 and totalWeight
+  let random = Math.random() * totalWeight;
+  
+  // Find the creature based on weighted random
+  for (const creature of filtered) {
+    random -= (RARITY_WEIGHTS[creature.rarity] || 1);
+    if (random <= 0) {
+      return creature;
+    }
+  }
+  
+  // Fallback (should never reach here)
+  return filtered[0];
 };

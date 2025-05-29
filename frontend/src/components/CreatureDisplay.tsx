@@ -94,6 +94,27 @@ export const CreatureDisplay: React.FC<CreatureDisplayProps> = ({ creatureSpawn,
             <div className="beast-snout"></div>
           </div>
         )}
+        
+        {creature.category === 'aberration' && (
+          <div className="creature-face aberration-face">
+            <div className="creature-eye left aberration-eye" style={{ backgroundColor: creature.type === 'glitch' ? '#00ff00' : '#9400d3' }}></div>
+            <div className="creature-eye right aberration-eye" style={{ backgroundColor: creature.type === 'glitch' ? '#ff00ff' : '#9400d3' }}></div>
+            {creature.type === 'glitch' && <div className="glitch-static"></div>}
+            {creature.type === 'money_hater' && <div className="void-mouth"></div>}
+          </div>
+        )}
+        
+        {creature.category === 'construct' && (
+          <div className="creature-face construct-face">
+            {creature.type === 'clanger' && (
+              <>
+                <div className="cymbal left-cymbal" style={{ backgroundColor: '#ffd700' }}></div>
+                <div className="cymbal right-cymbal" style={{ backgroundColor: '#ffd700' }}></div>
+                <div className="construct-eye center" style={{ backgroundColor: '#ff0000' }}></div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Aura Effect */}

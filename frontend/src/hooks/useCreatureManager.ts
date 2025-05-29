@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Creature, CreatureSpawn } from '../types/creatures';
-import { ALL_CREATURES, getRandomCreature } from '../data/creatures';
+import { ALL_CREATURES, getRandomCreature, getRandomCreatureByRarity } from '../data/creatures';
+import { GameItem } from '../types/gameItems';
 
 interface CreatureManagerProps {
   gameState: 'playing' | 'won' | 'lost' | 'round_over';
   gameMode: 'survival' | 'peaceful' | 'creative';
   words: Array<{ word: string; color: string; points: number }>;
+  items: GameItem[];
   onCreatureAttack: (damage: number, creatureId: string) => void;
   onCreatureDefeat: (creature: Creature, experienceGained: number) => void;
   containerRef: React.RefObject<HTMLDivElement>;
@@ -15,6 +17,7 @@ export const useCreatureManager = ({
   gameState,
   gameMode,
   words,
+  items,
   onCreatureAttack,
   onCreatureDefeat,
   containerRef
@@ -30,14 +33,17 @@ export const useCreatureManager = ({
     let creature: Creature;
     
     if (creatureType) {
-      creature = ALL_CREATURES.find(c => c.id === creatureType) || getRandomCreature();
+      creature = ALL_CREATURES.find(c => c.id === creatureType) || getRandomCreatureByRarity();
     } else {
       // Filter creatures based on game mode
-      const availableCreatures = gameMode === 'peaceful' 
-        ? ALL_CREATURES.filter(c => c.behavior.aggression === 'passive' || c.behavior.aggression === 'neutral')
-        : ALL_CREATURES.filter(c => c.rarity !== 'legendary' || Math.random() < 0.1); // 10% chance for legendary
-      
-      creature = availableCreatures[Math.floor(Math.random() * availableCreatures.length)];
+      if (gameMode === 'peaceful') {
+        creature = getRandomCreatureByRarity(c => 
+          c.behavior.aggression === 'passive' || c.behavior.aggression === 'neutral'
+        );
+      } else {
+        // Use rarity-based spawning for all modes
+        creature = getRandomCreatureByRarity();
+      }
     }
 
     // Check if we've reached max count for this creature type
@@ -155,16 +161,58 @@ export const useCreatureManager = ({
           break;
         
         case 'hunt':
-          // Move towards center where words typically are
-          const centerX = containerRect.width / 2;
-          const centerY = containerRect.height / 2;
-          const dx = centerX - position.x;
-          const dy = centerY - position.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance > 0) {
-            newPosition.x += (dx / distance) * creature.stats.speed * 0.5;
-            newPosition.y += (dy / distance) * creature.stats.speed * 0.5;
+          // Money Haters hunt for valuable items
+          if (creature.type === 'money_hater') {
+            // Find nearest valuable item
+            const valuableItems = items.filter(item => 
+              item.type === 'coin' || 
+              item.type === 'diamond' || 
+              item.type === 'gold_bar' || 
+              item.type === 'respawn_token'
+            );
+            
+            if (valuableItems.length > 0) {
+              // Find the nearest item
+              let nearestItem = valuableItems[0];
+              let minDistance = Infinity;
+              
+              valuableItems.forEach(item => {
+                const dx = item.position.x - position.x;
+                const dy = item.position.y - position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  nearestItem = item;
+                }
+              });
+              
+              // Move towards the nearest item
+              const dx = nearestItem.position.x - position.x;
+              const dy = nearestItem.position.y - position.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance > 0) {
+                newPosition.x += (dx / distance) * creature.stats.speed * 0.8;
+                newPosition.y += (dy / distance) * creature.stats.speed * 0.8;
+              }
+            } else {
+              // No valuable items, move randomly
+              newPosition.x += (Math.random() - 0.5) * creature.stats.speed;
+              newPosition.y += (Math.random() - 0.5) * creature.stats.speed;
+            }
+          } else {
+            // Other creatures move towards center
+            const centerX = containerRect.width / 2;
+            const centerY = containerRect.height / 2;
+            const dx = centerX - position.x;
+            const dy = centerY - position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 0) {
+              newPosition.x += (dx / distance) * creature.stats.speed * 0.5;
+              newPosition.y += (dy / distance) * creature.stats.speed * 0.5;
+            }
           }
           break;
         
@@ -194,7 +242,7 @@ export const useCreatureManager = ({
 
       return { ...spawn, position: newPosition };
     }));
-  }, [containerRef]);
+  }, [containerRef, items]);
 
   // Defeat creature
   const defeatCreature = useCallback((spawnTime: number) => {
