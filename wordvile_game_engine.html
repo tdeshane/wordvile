@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordvile: The Great Lexicon</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a0033, #330066, #4d0080);
+            color: #00ffff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px #00ffff;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .panel {
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid #0066cc;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .panel h3 {
+            color: #ffff00;
+            margin-top: 0;
+            text-shadow: 0 0 10px #ffff00;
+        }
+        
+        .stat-bar {
+            background: #333;
+            height: 20px;
+            border-radius: 10px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        
+        .stat-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .health { background: linear-gradient(90deg, #ff0000, #ff6666); }
+        .mana { background: linear-gradient(90deg, #0066ff, #66ccff); }
+        .power { background: linear-gradient(90deg, #ffaa00, #ffdd66); }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #004080, #0066cc);
+            color: white;
+            border: 2px solid #00aaff;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: linear-gradient(45deg, #0066cc, #0088ff);
+            box-shadow: 0 0 15px #00aaff;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        
+        .log {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00ffff;
+            padding-left: 10px;
+        }
+        
+        .combat { border-left-color: #ff6666; }
+        .discovery { border-left-color: #66ff66; }
+        .magic { border-left-color: #ff66ff; }
+        .system { border-left-color: #ffff66; }
+        
+        .inventory {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .item {
+            background: rgba(0, 50, 100, 0.7);
+            border: 1px solid #0088ff;
+            border-radius: 5px;
+            padding: 8px;
+            text-align: center;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .item:hover {
+            background: rgba(0, 80, 150, 0.9);
+            transform: scale(1.05);
+        }
+        
+        .legendary { border-color: #ffaa00; background: rgba(100, 50, 0, 0.7); }
+        .epic { border-color: #aa00ff; background: rgba(50, 0, 100, 0.7); }
+        .rare { border-color: #0066ff; background: rgba(0, 30, 80, 0.7); }
+        
+        .boss-health {
+            background: #660000;
+            height: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 2px solid #ff0000;
+        }
+        
+        .boss-health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff6666, #ffaaaa);
+            transition: width 0.5s ease;
+        }
+        
+        .dimensional-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .dimension {
+            background: rgba(20, 20, 60, 0.8);
+            border: 1px solid #4444ff;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .corrupted { background: rgba(60, 20, 20, 0.8); border-color: #ff4444; }
+        .pure { background: rgba(20, 60, 20, 0.8); border-color: #44ff44; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="title">WORDVILE: THE GREAT LEXICON</div>
+        
+        <div class="game-grid">
+            <div class="panel">
+                <h3>Player Status</h3>
+                <div>Health: <div class="stat-bar"><div class="stat-fill health" id="playerHealth" style="width: 100%"></div></div></div>
+                <div>Mana: <div class="stat-bar"><div class="stat-fill mana" id="playerMana" style="width: 100%"></div></div></div>
+                <div>Power: <div class="stat-bar"><div class="stat-fill power" id="playerPower" style="width: 50%"></div></div></div>
+                <div id="playerStats"></div>
+            </div>
+            
+            <div class="panel">
+                <h3>Current Location</h3>
+                <div id="locationInfo"></div>
+                <div class="dimensional-status" id="dimensionalStatus"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="exploreArea()">Explore Area</button>
+            <button onclick="searchWeapons()">Search for Weapons</button>
+            <button onclick="useElderTear()" id="elderTearBtn" disabled>Use Elder Tear</button>
+            <button onclick="craftItems()">Craft Items</button>
+            <button onclick="summonAllies()">Summon Allies</button>
+            <button onclick="castMagic()">Cast Magic</button>
+            <button onclick="solveAncientPuzzle()">Solve Ancient Puzzle</button>
+            <button onclick="challengeGreatLexicon()" id="finalBossBtn" disabled>Challenge Great Lexicon</button>
+        </div>
+        
+        <div class="game-grid">
+            <div class="panel">
+                <h3>Inventory</h3>
+                <div class="inventory" id="inventory"></div>
+            </div>
+            
+            <div class="panel">
+                <h3>Ancient Weapons Progress</h3>
+                <div id="weaponProgress"></div>
+            </div>
+        </div>
+        
+        <div id="bossSection" style="display: none;">
+            <h3>🔥 THE GREAT LEXICON 🔥</h3>
+            <div class="boss-health">
+                <div class="boss-health-fill" id="bossHealth" style="width: 100%"></div>
+            </div>
+            <div id="bossStatus"></div>
+        </div>
+        
+        <div class="log" id="gameLog"></div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            player: {
+                health: 100,
+                mana: 100,
+                power: 50,
+                level: 1,
+                location: 'Ancient Ruins',
+                inventory: ['Bronze Sword', 'Health Potion'],
+                ancientWeapons: [],
+                allies: [],
+                spells: ['Fireball', 'Heal'],
+                elderTears: 0,
+                completedPuzzles: 0
+            },
+            greatLexicon: {
+                health: 10000,
+                maxHealth: 10000,
+                phase: 1,
+                masks: 3,
+                whyermsActive: 0,
+                timeControlActive: true
+            },
+            world: {
+                dimensionsCorrupted: 5,
+                totalDimensions: 12,
+                ancientWeaponsFound: 0,
+                totalAncientWeapons: 12,
+                mapPiecesFound: 0,
+                totalMapPieces: 7
+            },
+            gamePhase: 'exploration' // exploration, preparation, finalBoss
+        };
+
+        // Ancient Weapons Database
+        const ancientWeapons = [
+            'Decross', 'Hincha', 'Chacket', 'Hanky', 'Linther Poison Bucket',
+            'Gold Watch of Doom', 'Cobbler', 'Hyper Gun', 'Sheiker',
+            'Void Pinball Blaster', 'Shadow Ray', 'Cloud of Blindness'
+        ];
+
+        const locations = [
+            'Ancient Ruins', 'Corrupted Forest', 'Time Distortion Valley',
+            'Elder Sanctuary', 'Nether Portal Chamber', 'Crystal Palace Ruins',
+            'Wordvile Village', 'Great Lexicon\'s Fortress'
+        ];
+
+        const monsterTypes = ['Zombies', 'Money Haters', 'Time Wraiths', 'Elderwart', 'Whyerms'];
+
+        // Utility Functions
+        function log(message, type = 'system') {
+            const gameLog = document.getElementById('gameLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            gameLog.appendChild(entry);
+            gameLog.scrollTop = gameLog.scrollHeight;
+        }
+
+        function updateUI() {
+            // Update player stats
+            document.getElementById('playerHealth').style.width = `${gameState.player.health}%`;
+            document.getElementById('playerMana').style.width = `${gameState.player.mana}%`;
+            document.getElementById('playerPower').style.width = `${gameState.player.power}%`;
+            
+            document.getElementById('playerStats').innerHTML = `
+                Level: ${gameState.player.level}<br>
+                Elder Tears: ${gameState.player.elderTears}<br>
+                Allies: ${gameState.player.allies.length}<br>
+                Puzzles Solved: ${gameState.player.completedPuzzles}
+            `;
+
+            // Update location
+            document.getElementById('locationInfo').innerHTML = `
+                <strong>${gameState.player.location}</strong><br>
+                Ancient Weapons Found: ${gameState.world.ancientWeaponsFound}/${gameState.world.totalAncientWeapons}<br>
+                Map Pieces: ${gameState.world.mapPiecesFound}/${gameState.world.totalMapPieces}
+            `;
+
+            // Update dimensional status
+            const dimensionalDiv = document.getElementById('dimensionalStatus');
+            dimensionalDiv.innerHTML = '';
+            for (let i = 0; i < gameState.world.totalDimensions; i++) {
+                const dim = document.createElement('div');
+                dim.className = i < gameState.world.dimensionsCorrupted ? 'dimension corrupted' : 'dimension pure';
+                dim.textContent = `Dim ${i + 1}`;
+                dimensionalDiv.appendChild(dim);
+            }
+
+            // Update inventory
+            updateInventory();
+            updateWeaponProgress();
+
+            // Update button states
+            document.getElementById('elderTearBtn').disabled = gameState.player.elderTears === 0;
+            document.getElementById('finalBossBtn').disabled = gameState.world.ancientWeaponsFound < 8;
+
+            // Update boss section
+            if (gameState.gamePhase === 'finalBoss') {
+                document.getElementById('bossSection').style.display = 'block';
+                const healthPercent = (gameState.greatLexicon.health / gameState.greatLexicon.maxHealth) * 100;
+                document.getElementById('bossHealth').style.width = `${healthPercent}%`;
+                document.getElementById('bossStatus').innerHTML = `
+                    Phase: ${gameState.greatLexicon.phase}<br>
+                    Masks: ${gameState.greatLexicon.masks}<br>
+                    Active Whyerms: ${gameState.greatLexicon.whyermsActive}<br>
+                    Time Control: ${gameState.greatLexicon.timeControlActive ? 'ACTIVE' : 'BROKEN'}
+                `;
+            }
+        }
+
+        function updateInventory() {
+            const inventory = document.getElementById('inventory');
+            inventory.innerHTML = '';
+            
+            gameState.player.inventory.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'item';
+                if (ancientWeapons.includes(item)) {
+                    itemDiv.className += ' legendary';
+                }
+                itemDiv.textContent = item;
+                itemDiv.onclick = () => useItem(item);
+                inventory.appendChild(itemDiv);
+            });
+        }
+
+        function updateWeaponProgress() {
+            const weaponDiv = document.getElementById('weaponProgress');
+            weaponDiv.innerHTML = '';
+            
+            ancientWeapons.forEach(weapon => {
+                const weaponItem = document.createElement('div');
+                weaponItem.style.margin = '5px 0';
+                weaponItem.style.padding = '5px';
+                weaponItem.style.borderRadius = '3px';
+                
+                if (gameState.player.ancientWeapons.includes(weapon)) {
+                    weaponItem.style.background = 'rgba(0, 100, 0, 0.3)';
+                    weaponItem.style.color = '#66ff66';
+                    weaponItem.innerHTML = `✓ ${weapon}`;
+                } else {
+                    weaponItem.style.background = 'rgba(100, 0, 0, 0.3)';
+                    weaponItem.style.color = '#ff6666';
+                    weaponItem.innerHTML = `✗ ${weapon}`;
+                }
+                weaponDiv.appendChild(weaponItem);
+            });
+        }
+
+        // Game Actions
+        function exploreArea() {
+            const newLocation = locations[Math.floor(Math.random() * locations.length)];
+            gameState.player.location = newLocation;
+            
+            const events = [
+                'You discover ancient runes glowing with mysterious power.',
+                'A Money Hater appears, but you manage to avoid it.',
+                'You find a hidden chamber with strange artifacts.',
+                'Time distortions warp the air around you.',
+                'Elderwart grows nearby - you carefully avoid its bite.',
+                'You hear the distant roar of the Great Lexicon.'
+            ];
+            
+            log(events[Math.floor(Math.random() * events.length)], 'discovery');
+            
+            // Random events
+            if (Math.random() < 0.3) {
+                const elderTearFound = Math.random() < 0.4;
+                if (elderTearFound) {
+                    gameState.player.elderTears++;
+                    log('You found an Elder Tear! Its sweet essence strengthens you.', 'magic');
+                }
+            }
+            
+            if (Math.random() < 0.2) {
+                const mapPiece = Math.random() < 0.5;
+                if (mapPiece && gameState.world.mapPiecesFound < gameState.world.totalMapPieces) {
+                    gameState.world.mapPiecesFound++;
+                    log('You discovered a fragment of the ancient map!', 'discovery');
+                }
+            }
+            
+            updateUI();
+        }
+
+        function searchWeapons() {
+            if (gameState.world.mapPiecesFound < 3) {
+                log('You need more map pieces to locate the ancient weapons.', 'system');
+                return;
+            }
+            
+            const unownedWeapons = ancientWeapons.filter(w => !gameState.player.ancientWeapons.includes(w));
+            if (unownedWeapons.length === 0) {
+                log('You have found all the ancient weapons!', 'system');
+                return;
+            }
+            
+            if (Math.random() < 0.4) {
+                const weapon = unownedWeapons[Math.floor(Math.random() * unownedWeapons.length)];
+                gameState.player.ancientWeapons.push(weapon);
+                gameState.player.inventory.push(weapon);
+                gameState.world.ancientWeaponsFound++;
+                gameState.player.power += 10;
+                
+                log(`🗡️ ANCIENT WEAPON DISCOVERED: ${weapon}! Your power grows!`, 'magic');
+                
+                if (gameState.world.ancientWeaponsFound >= 8) {
+                    log('⚡ You have enough ancient weapons to challenge the Great Lexicon!', 'system');
+                }
+            } else {
+                log('Your search yields nothing but dust and echoes.', 'system');
+            }
+            
+            updateUI();
+        }
+
+        function useElderTear() {
+            if (gameState.player.elderTears <= 0) return;
+            
+            gameState.player.elderTears--;
+            gameState.player.health = Math.min(100, gameState.player.health + 25);
+            gameState.player.mana = Math.min(100, gameState.player.mana + 30);
+            
+            // Cleanse dimension
+            if (gameState.world.dimensionsCorrupted > 0) {
+                gameState.world.dimensionsCorrupted--;
+                log('🌟 Elder Tear cleanses a corrupted dimension! Reality stabilizes.', 'magic');
+            }
+            
+            log('Elder Tear restores your health and mana!', 'magic');
+            updateUI();
+        }
+
+        function craftItems() {
+            const recipes = [
+                'Health Potion', 'Mana Elixir', 'Power Crystal', 'Shield Rune',
+                'Time Shard', 'Anti-Corruption Ward'
+            ];
+            
+            const item = recipes[Math.floor(Math.random() * recipes.length)];
+            gameState.player.inventory.push(item);
+            
+            if (Math.random() < 0.3) {
+                gameState.player.level++;
+                log(`📈 Level up! You are now level ${gameState.player.level}!`, 'system');
+            }
+            
+            log(`🔨 Crafted: ${item}`, 'discovery');
+            updateUI();
+        }
+
+        function summonAllies() {
+            const possibleAllies = [
+                'Fairy Guardian', 'Unicorn Healer', 'Time Mage', 'Ancient Warrior',
+                'Crystal Golem', 'Word Spirit', 'Dimension Walker'
+            ];
+            
+            const ally = possibleAllies[Math.floor(Math.random() * possibleAllies.length)];
+            if (!gameState.player.allies.includes(ally)) {
+                gameState.player.allies.push(ally);
+                log(`🤝 ${ally} joins your cause against the Great Lexicon!`, 'discovery');
+            } else {
+                log('Your existing allies grow stronger!', 'system');
+            }
+            
+            updateUI();
+        }
+
+        function castMagic() {
+            if (gameState.player.mana < 20) {
+                log('Not enough mana to cast magic!', 'system');
+                return;
+            }
+            
+            gameState.player.mana -= 20;
+            
+            const spells = [
+                'Reality Anchor - strengthens local dimensional stability',
+                'Time Disruption - briefly interferes with Great Lexicon\'s control',
+                'Word Shield - protects against linguistic attacks',
+                'Ancient Sight - reveals hidden weapon locations',
+                'Chaos Binding - confuses enemy monsters'
+            ];
+            
+            const spell = spells[Math.floor(Math.random() * spells.length)];
+            log(`✨ Cast: ${spell}`, 'magic');
+            
+            if (spell.includes('Ancient Sight') && Math.random() < 0.6) {
+                gameState.world.mapPiecesFound = Math.min(gameState.world.totalMapPieces, gameState.world.mapPiecesFound + 1);
+                log('Ancient Sight reveals another map piece!', 'magic');
+            }
+            
+            updateUI();
+        }
+
+        function solveAncientPuzzle() {
+            const puzzles = [
+                'Linguistic cipher requiring creativity and wordplay',
+                'Mathematical sequence from Bronze Age trade routes',
+                'Temporal paradox involving cause and effect',
+                'Dimensional geometry puzzle',
+                'Memory reconstruction of Great Lexicon\'s past',
+                'Collaborative riddle requiring multiple perspectives'
+            ];
+            
+            const puzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+            gameState.player.completedPuzzles++;
+            gameState.player.power += 5;
+            
+            log(`🧩 Solved: ${puzzle}`, 'discovery');
+            
+            if (gameState.player.completedPuzzles >= 5) {
+                log('🎓 Your puzzle-solving mastery unlocks ancient knowledge!', 'system');
+                gameState.player.power += 20;
+            }
+            
+            updateUI();
+        }
+
+        function challengeGreatLexicon() {
+            if (gameState.world.ancientWeaponsFound < 8) {
+                log('You need at least 8 ancient weapons to face the Great Lexicon!', 'system');
+                return;
+            }
+            
+            gameState.gamePhase = 'finalBoss';
+            log('🔥 THE FINAL BATTLE BEGINS! 🔥', 'combat');
+            log('The Great Lexicon emerges from the depths of devil\'s darkness!', 'combat');
+            log('His poisonous masks gleam with dark magic!', 'combat');
+            
+            // Start boss battle
+            bossBattle();
+            updateUI();
+        }
+
+        function bossBattle() {
+            const playerDamage = Math.floor(gameState.player.power * (1 + gameState.player.allies.length * 0.2));
+            const bossAttack = Math.floor(Math.random() * 50 + 30);
+            
+            // Player attacks
+            gameState.greatLexicon.health -= playerDamage;
+            log(`⚔️ You deal ${playerDamage} damage using ancient weapons and ally power!`, 'combat');
+            
+            // Check for phase transitions
+            const healthPercent = gameState.greatLexicon.health / gameState.greatLexicon.maxHealth;
+            
+            if (healthPercent <= 0.7 && gameState.greatLexicon.phase === 1) {
+                gameState.greatLexicon.phase = 2;
+                gameState.greatLexicon.whyermsActive = 3;
+                log('🐛 Phase 2: Great Lexicon summons Whyerms!', 'combat');
+            }
+            
+            if (healthPercent <= 0.3 && gameState.greatLexicon.phase === 2) {
+                gameState.greatLexicon.phase = 3;
+                gameState.greatLexicon.whyermsActive = 6;
+                log('🌪️ Phase 3: Reality begins to unravel! Maximum Whyerms active!', 'combat');
+            }
+            
+            // Boss attacks back
+            if (gameState.greatLexicon.health > 0) {
+                gameState.player.health -= Math.max(5, bossAttack - gameState.player.allies.length * 5);
+                log(`💥 Great Lexicon attacks for ${bossAttack} damage! Allies reduce damage.`, 'combat');
+                
+                // Boss special abilities
+                if (Math.random() < 0.3) {
+                    log('🎭 Great Lexicon creates a new poisonous mask!', 'combat');
+                    gameState.greatLexicon.masks++;
+                }
+                
+                if (Math.random() < 0.2) {
+                    log('⏰ Time distortion: Great Lexicon\'s temporal control wavers!', 'magic');
+                }
+            }
+            
+            // Victory condition
+            if (gameState.greatLexicon.health <= 0) {
+                log('🎉 VICTORY! The Great Lexicon is defeated!', 'combat');
+                log('🌟 Reality is restored! The billion-year war finally ends!', 'magic');
+                log('📚 The ancient weapons combine into the Ultimate Pokeball!', 'discovery');
+                log('🏆 Wordvile is saved! You are the heroes of legend!', 'system');
+                return;
+            }
+            
+            // Defeat condition
+            if (gameState.player.health <= 0) {
+                log('💀 Defeat! The Great Lexicon\'s power was too great...', 'combat');
+                log('🔄 But heroes can try again with more preparation!', 'system');
+                gameState.player.health = 50; // Allow retry
+                gameState.gamePhase = 'exploration';
+            }
+            
+            updateUI();
+        }
+
+        function useItem(item) {
+            const index = gameState.player.inventory.indexOf(item);
+            if (index === -1) return;
+            
+            if (item === 'Health Potion') {
+                gameState.player.health = Math.min(100, gameState.player.health + 30);
+                gameState.player.inventory.splice(index, 1);
+                log('Used Health Potion - restored 30 health!', 'system');
+            } else if (item === 'Mana Elixir') {
+                gameState.player.mana = Math.min(100, gameState.player.mana + 40);
+                gameState.player.inventory.splice(index, 1);
+                log('Used Mana Elixir - restored 40 mana!', 'magic');
+            } else if (ancientWeapons.includes(item)) {
+                log(`Ancient weapon ${item} pulses with cosmic power!`, 'magic');
+            } else {
+                log(`Examined ${item} - mysterious properties detected.`, 'discovery');
+            }
+            
+            updateUI();
+        }
+
+        // Initialize game
+        function initGame() {
+            log('🌟 Welcome to Wordvile: The Great Lexicon! 🌟', 'system');
+            log('The billion-year war rages on. Reality hangs in the balance.', 'system');
+            log('Find the ancient weapons. Solve the puzzles. Save all dimensions!', 'system');
+            updateUI();
+        }
+
+        // Auto-save game state (using in-memory storage for Claude.ai compatibility)
+        let savedGameState = null;
+        
+        function saveGame() {
+            savedGameState = JSON.parse(JSON.stringify(gameState));
+            log('Game progress saved in memory!', 'system');
+        }
+        
+        function loadGame() {
+            if (savedGameState) {
+                Object.assign(gameState, savedGameState);
+                log('Game progress loaded!', 'system');
+                updateUI();
+            }
+        }
+        
+        // Auto-save every 30 seconds
+        setInterval(saveGame, 30000);
+
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>

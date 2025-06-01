@@ -1,0 +1,372 @@
+.wordvile-game-engine {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(to bottom, #1a1a2e 0%, #0f0f1e 100%);
+  overflow: hidden;
+}
+
+/* Game Stats */
+.game-stats {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #444;
+  z-index: 100;
+  color: white;
+}
+
+.game-stats h3 {
+  margin: 0 0 10px 0;
+  color: #FFD700;
+}
+
+.game-stats div {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+/* Creature List */
+.creature-list {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #444;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 100;
+  color: white;
+  min-width: 200px;
+}
+
+.creature-list h3 {
+  margin: 0 0 10px 0;
+  color: #FFD700;
+}
+
+.creature-entries {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.creature-entry {
+  margin: 5px 0;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.creature-entry:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(5px);
+}
+
+/* Spawn Controls */
+.spawn-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #444;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.spawn-controls button {
+  background: #444;
+  color: white;
+  border: 2px solid #666;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.spawn-controls button:hover {
+  background: #666;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+}
+
+/* Creature Selector */
+.creature-selector {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px;
+  border-radius: 10px;
+  border: 2px solid #444;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+.creature-selector select {
+  background: #333;
+  color: white;
+  border: 1px solid #666;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-family: 'Courier New', monospace;
+  min-width: 250px;
+}
+
+.creature-selector button {
+  background: #4B0082;
+  color: white;
+  border: 2px solid #666;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s;
+}
+
+.creature-selector button:hover:not(:disabled) {
+  background: #6B0082;
+  transform: translateY(-2px);
+}
+
+.creature-selector button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Message Display */
+.message-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 30px 50px;
+  border-radius: 10px;
+  border: 3px solid #FFD700;
+  font-size: 24px;
+  text-align: center;
+  color: white;
+  z-index: 1000;
+  animation: messageAppear 0.3s ease-out;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes messageAppear {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Instructions */
+.instructions {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  color: white;
+  font-size: 12px;
+  max-width: 300px;
+}
+
+.instructions h4 {
+  margin: 0 0 8px 0;
+  color: #FFD700;
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instructions li {
+  margin: 3px 0;
+}
+
+/* Creatures */
+.creature {
+  position: absolute;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.creature-body {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Creature Health Bar */
+.creature-health-bar {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.health-fill {
+  height: 100%;
+  background: linear-gradient(to right, #ff0000, #ffff00, #00ff00);
+  transition: width 0.3s ease;
+}
+
+/* Game Items */
+.game-item {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  animation: itemFloat 2s ease-in-out infinite;
+  z-index: 5;
+  transition: transform 0.2s;
+}
+
+.game-item:hover {
+  transform: scale(1.2);
+}
+
+@keyframes itemFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(180deg); }
+}
+
+/* Screen shake animation */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0); }
+  25% { transform: translate(-5px, 5px); }
+  50% { transform: translate(5px, -5px); }
+  75% { transform: translate(-5px, -5px); }
+}
+
+/* Import creature styles from the main game */
+.creature.money-hater .creature-body {
+  background: radial-gradient(circle, #ff4444, #cc0000);
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.8);
+}
+
+.creature.clanger .creature-body {
+  background: linear-gradient(135deg, #666, #333);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+  animation: clang 2s ease-in-out infinite, float 3s ease-in-out infinite;
+}
+
+@keyframes clang {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+.creature.glitch .creature-body {
+  background: #000;
+  animation: glitchEffect 0.5s infinite, float 3s ease-in-out infinite;
+}
+
+@keyframes glitchEffect {
+  0% { transform: translate(0); filter: hue-rotate(0deg); }
+  20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); }
+  40% { transform: translate(-2px, -2px); filter: hue-rotate(180deg); }
+  60% { transform: translate(2px, 2px); filter: hue-rotate(270deg); }
+  80% { transform: translate(2px, -2px); filter: hue-rotate(360deg); }
+  100% { transform: translate(0); filter: hue-rotate(0deg); }
+}
+
+.creature.creature-all_realm_power .creature-body {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(45deg, 
+    #FFD700 0%, #4B0082 25%, #FF1493 50%, 
+    #00CED1 75%, #FFD700 100%);
+  animation: legendaryPulse 3s ease-in-out infinite, float 3s ease-in-out infinite;
+  font-size: 50px;
+}
+
+@keyframes legendaryPulse {
+  0%, 100% { 
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
+               0 0 60px rgba(138, 43, 226, 0.6),
+               0 0 90px rgba(255, 20, 147, 0.4);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 50px rgba(255, 215, 0, 1),
+               0 0 100px rgba(138, 43, 226, 0.8),
+               0 0 150px rgba(255, 20, 147, 0.6);
+    transform: scale(1.1);
+  }
+}
+
+.creature.creature-legendary .creature-body {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #C0C0C0, #E5E5E5, #C0C0C0);
+  box-shadow: 0 0 25px rgba(192, 192, 192, 0.9);
+}
+
+.creature.creature-mythical .creature-body {
+  background: linear-gradient(135deg, #8B0000, #FF4500);
+  box-shadow: 0 0 30px rgba(255, 69, 0, 0.8);
+  width: 90px;
+  height: 90px;
+}
+
+.creature.creature-educational .creature-body {
+  background: linear-gradient(135deg, #1E90FF, #4169E1);
+  box-shadow: 0 0 20px rgba(30, 144, 255, 0.7);
+}
+
+.creature.creature-cosmic .creature-body {
+  background: radial-gradient(circle, #191970, #000033);
+  box-shadow: 0 0 40px rgba(138, 43, 226, 0.8);
+}
+
+/* Gaze rotation animation */
+@keyframes gazeRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordvile Game Engine - Complete Creature Showcase</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #1a1a2e 0%, #0f0f1e 100%);
+            overflow: hidden;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .creature {
+            position: absolute;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .creature-body {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Money Hater */
+        .money-hater .creature-body {
+            background: radial-gradient(circle, #ff4444, #cc0000);
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.8);
+        }
+
+        /* Clanger */
+        .clanger .creature-body {
+            background: linear-gradient(135deg, #666, #333);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+            animation: clang 2s ease-in-out infinite;
+        }
+
+        @keyframes clang {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        /* Glitch */
+        .glitch .creature-body {
+            background: #000;
+            animation: glitchEffect 0.5s infinite;
+        }
+
+        @keyframes glitchEffect {
+            0% { transform: translate(0); filter: hue-rotate(0deg); }
+            20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); }
+            40% { transform: translate(-2px, -2px); filter: hue-rotate(180deg); }
+            60% { transform: translate(2px, 2px); filter: hue-rotate(270deg); }
+            80% { transform: translate(2px, -2px); filter: hue-rotate(360deg); }
+            100% { transform: translate(0); filter: hue-rotate(0deg); }
+        }
+
+        /* Great Lexicon */
+        .great-lexicon .creature-body {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, 
+                #FFD700 0%, #4B0082 25%, #FF1493 50%, 
+                #00CED1 75%, #FFD700 100%);
+            animation: legendaryPulse 3s ease-in-out infinite;
+            font-size: 40px;
+        }
+
+        @keyframes legendaryPulse {
+            0%, 100% { 
+                box-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
+                           0 0 60px rgba(138, 43, 226, 0.6),
+                           0 0 90px rgba(255, 20, 147, 0.4);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 50px rgba(255, 215, 0, 1),
+                           0 0 100px rgba(138, 43, 226, 0.8),
+                           0 0 150px rgba(255, 20, 147, 0.6);
+                transform: scale(1.1);
+            }
+        }
+
+        /* Silver */
+        .silver .creature-body {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #C0C0C0, #E5E5E5, #C0C0C0);
+            box-shadow: 0 0 25px rgba(192, 192, 192, 0.9);
+        }
+
+        /* Dragon */
+        .dragon .creature-body {
+            background: linear-gradient(135deg, #8B0000, #FF4500);
+            box-shadow: 0 0 30px rgba(255, 69, 0, 0.8);
+            width: 90px;
+            height: 90px;
+        }
+
+        /* Educational */
+        .educational .creature-body {
+            background: linear-gradient(135deg, #1E90FF, #4169E1);
+            box-shadow: 0 0 20px rgba(30, 144, 255, 0.7);
+        }
+
+        /* Cosmic */
+        .cosmic .creature-body {
+            background: radial-gradient(circle, #191970, #000033);
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.8);
+        }
+
+        /* Game Items */
+        .game-item {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            animation: itemFloat 2s ease-in-out infinite;
+            z-index: 5;
+        }
+
+        @keyframes itemFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(180deg); }
+        }
+
+        /* UI Elements */
+        #game-stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #444;
+            z-index: 100;
+        }
+
+        #creature-list {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #444;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .stat-line {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .creature-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .creature-entry:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        #spawn-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #444;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        button {
+            background: #444;
+            color: white;
+            border: 2px solid #666;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #666;
+            transform: translateY(-2px);
+        }
+
+        #message-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            border: 3px solid #FFD700;
+            font-size: 24px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="game-stats">
+            <h3>Game Stats</h3>
+            <div class="stat-line">Score: <span id="score">0</span></div>
+            <div class="stat-line">Items Collected: <span id="items-collected">0</span></div>
+            <div class="stat-line">Creatures Spawned: <span id="creatures-spawned">0</span></div>
+            <div class="stat-line">Time: <span id="game-time">0:00</span></div>
+        </div>
+
+        <div id="creature-list">
+            <h3>Active Creatures</h3>
+            <div id="creature-entries"></div>
+        </div>
+
+        <div id="spawn-controls">
+            <button onclick="spawnRandomCreature()">Spawn Random</button>
+            <button onclick="spawnLegendary()">Spawn Legendary</button>
+            <button onclick="spawnGreatLexicon()">Summon Great Lexicon</button>
+            <button onclick="clearAll()">Clear All</button>
+            <button onclick="spawnItem()">Spawn Item</button>
+        </div>
+
+        <div id="message-display"></div>
+    </div>
+
+    <script>
+        // Game Engine Core
+        const gameState = {
+            creatures: [],
+            items: [],
+            score: 0,
+            itemsCollected: 0,
+            creaturesSpawned: 0,
+            startTime: Date.now(),
+            isPaused: false
+        };
+
+        // Creature Definitions
+        const CREATURE_TYPES = {
+            money_hater: {
+                name: 'Money Hater',
+                emoji: '💸',
+                class: 'money-hater',
+                behavior: 'hunts_items',
+                speed: 2
+            },
+            clanger: {
+                name: 'Clanger',
+                emoji: '🔔',
+                class: 'clanger',
+                behavior: 'attacks_player',
+                speed: 1.5
+            },
+            glitch: {
+                name: 'Glitch',
+                emoji: '👾',
+                class: 'glitch',
+                behavior: 'corrupts',
+                speed: 3
+            },
+            great_lexicon: {
+                name: 'THE GREAT LEXICON',
+                emoji: '📖',
+                class: 'great-lexicon',
+                behavior: 'omnipotent',
+                speed: 0.5
+            },
+            silver: {
+                name: 'Silver',
+                emoji: '⚔️',
+                class: 'silver',
+                behavior: 'hero',
+                speed: 2
+            },
+            dragon: {
+                name: 'Dragon',
+                emoji: '🐉',
+                class: 'dragon',
+                behavior: 'aggressive',
+                speed: 1.8
+            },
+            spelling_sprite: {
+                name: 'Spelling Sprite',
+                emoji: '✨',
+                class: 'educational',
+                behavior: 'helpful',
+                speed: 2.5
+            },
+            cosmic_entity: {
+                name: 'Cosmic Entity',
+                emoji: '🌌',
+                class: 'cosmic',
+                behavior: 'mysterious',
+                speed: 1
+            }
+        };
+
+        // Item types
+        const ITEM_TYPES = ['💰', '💎', '🏆', '⭐', '🎁'];
+
+        // Initialize game
+        function initGame() {
+            const canvas = document.getElementById('game-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Start game loop
+            gameLoop();
+            
+            // Update stats
+            setInterval(updateStats, 100);
+        }
+
+        // Spawn creature
+        function spawnCreature(type, x, y) {
+            const creatureData = CREATURE_TYPES[type];
+            if (!creatureData) return;
+
+            const creature = {
+                id: Date.now() + Math.random(),
+                type: type,
+                x: x || Math.random() * (window.innerWidth - 100),
+                y: y || Math.random() * (window.innerHeight - 100),
+                vx: (Math.random() - 0.5) * creatureData.speed,
+                vy: (Math.random() - 0.5) * creatureData.speed,
+                element: null
+            };
+
+            // Create DOM element
+            const element = document.createElement('div');
+            element.className = `creature ${creatureData.class}`;
+            element.innerHTML = `<div class="creature-body">${creatureData.emoji}</div>`;
+            element.style.left = creature.x + 'px';
+            element.style.top = creature.y + 'px';
+            element.onclick = () => creatureClicked(creature);
+            
+            document.getElementById('game-container').appendChild(element);
+            creature.element = element;
+
+            gameState.creatures.push(creature);
+            gameState.creaturesSpawned++;
+            updateCreatureList();
+
+            // Special spawn effects
+            if (type === 'great_lexicon') {
+                showMessage('THE GREAT LEXICON HAS ARRIVED!', 3000);
+                document.body.style.animation = 'screenShake 0.5s';
+            }
+        }
+
+        // Spawn random creature
+        function spawnRandomCreature() {
+            const types = Object.keys(CREATURE_TYPES);
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            spawnCreature(randomType);
+        }
+
+        // Spawn legendary creature
+        function spawnLegendary() {
+            const legendaries = ['great_lexicon', 'silver', 'dragon'];
+            const randomLegendary = legendaries[Math.floor(Math.random() * legendaries.length)];
+            spawnCreature(randomLegendary);
+        }
+
+        // Spawn Great Lexicon specifically
+        function spawnGreatLexicon() {
+            spawnCreature('great_lexicon', window.innerWidth / 2, window.innerHeight / 2);
+        }
+
+        // Spawn item
+        function spawnItem() {
+            const item = {
+                id: Date.now() + Math.random(),
+                type: ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)],
+                x: Math.random() * (window.innerWidth - 50),
+                y: Math.random() * (window.innerHeight - 50),
+                element: null
+            };
+
+            const element = document.createElement('div');
+            element.className = 'game-item';
+            element.innerHTML = item.type;
+            element.style.left = item.x + 'px';
+            element.style.top = item.y + 'px';
+            
+            document.getElementById('game-container').appendChild(element);
+            item.element = element;
+            
+            gameState.items.push(item);
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!gameState.isPaused) {
+                updateCreatures();
+                checkCollisions();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update creature positions
+        function updateCreatures() {
+            gameState.creatures.forEach(creature => {
+                const creatureData = CREATURE_TYPES[creature.type];
+                
+                // Update position based on behavior
+                if (creatureData.behavior === 'hunts_items' && gameState.items.length > 0) {
+                    // Find nearest item
+                    let nearestItem = null;
+                    let minDist = Infinity;
+                    
+                    gameState.items.forEach(item => {
+                        const dist = Math.hypot(item.x - creature.x, item.y - creature.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestItem = item;
+                        }
+                    });
+                    
+                    if (nearestItem) {
+                        const dx = nearestItem.x - creature.x;
+                        const dy = nearestItem.y - creature.y;
+                        const dist = Math.hypot(dx, dy);
+                        creature.vx = (dx / dist) * creatureData.speed;
+                        creature.vy = (dy / dist) * creatureData.speed;
+                    }
+                }
+                
+                // Update position
+                creature.x += creature.vx;
+                creature.y += creature.vy;
+                
+                // Bounce off walls
+                if (creature.x <= 0 || creature.x >= window.innerWidth - 60) {
+                    creature.vx = -creature.vx;
+                }
+                if (creature.y <= 0 || creature.y >= window.innerHeight - 60) {
+                    creature.vy = -creature.vy;
+                }
+                
+                // Update DOM element
+                if (creature.element) {
+                    creature.element.style.left = creature.x + 'px';
+                    creature.element.style.top = creature.y + 'px';
+                }
+            });
+        }
+
+        // Check collisions
+        function checkCollisions() {
+            // Check creature-item collisions
+            gameState.creatures.forEach(creature => {
+                if (CREATURE_TYPES[creature.type].behavior === 'hunts_items') {
+                    gameState.items.forEach((item, index) => {
+                        const dist = Math.hypot(item.x - creature.x, item.y - creature.y);
+                        if (dist < 50) {
+                            // Collect item
+                            if (item.element) {
+                                item.element.remove();
+                            }
+                            gameState.items.splice(index, 1);
+                            gameState.itemsCollected++;
+                            gameState.score += 10;
+                        }
+                    });
+                }
+            });
+        }
+
+        // Creature clicked
+        function creatureClicked(creature) {
+            const creatureData = CREATURE_TYPES[creature.type];
+            showMessage(`${creatureData.name} says hello!`, 2000);
+            
+            // Special interactions
+            if (creature.type === 'great_lexicon') {
+                gameState.score += 1000;
+                showMessage('You have been blessed by THE GREAT LEXICON! +1000 points!', 3000);
+            }
+        }
+
+        // Clear all entities
+        function clearAll() {
+            gameState.creatures.forEach(creature => {
+                if (creature.element) creature.element.remove();
+            });
+            gameState.items.forEach(item => {
+                if (item.element) item.element.remove();
+            });
+            gameState.creatures = [];
+            gameState.items = [];
+            updateCreatureList();
+        }
+
+        // Update stats display
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('items-collected').textContent = gameState.itemsCollected;
+            document.getElementById('creatures-spawned').textContent = gameState.creaturesSpawned;
+            
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('game-time').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Update creature list
+        function updateCreatureList() {
+            const container = document.getElementById('creature-entries');
+            container.innerHTML = '';
+            
+            gameState.creatures.forEach(creature => {
+                const creatureData = CREATURE_TYPES[creature.type];
+                const entry = document.createElement('div');
+                entry.className = 'creature-entry';
+                entry.innerHTML = `${creatureData.emoji} ${creatureData.name}`;
+                entry.onclick = () => {
+                    creature.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    creature.element.style.animation = 'pulse 1s';
+                };
+                container.appendChild(entry);
+            });
+        }
+
+        // Show message
+        function showMessage(text, duration) {
+            const display = document.getElementById('message-display');
+            display.textContent = text;
+            display.style.display = 'block';
+            setTimeout(() => {
+                display.style.display = 'none';
+            }, duration);
+        }
+
+        // Add screen shake animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes screenShake {
+                0%, 100% { transform: translate(0); }
+                25% { transform: translate(-5px, 5px); }
+                50% { transform: translate(5px, -5px); }
+                75% { transform: translate(-5px, -5px); }
+            }
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize on load
+        window.onload = initGame;
+        
+        // Handle resize
+        window.onresize = () => {
+            const canvas = document.getElementById('game-canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    spawnRandomCreature();
+                    break;
+                case 'i':
+                    spawnItem();
+                    break;
+                case 'l':
+                    spawnLegendary();
+                    break;
+                case 'g':
+                    spawnGreatLexicon();
+                    break;
+                case 'c':
+                    clearAll();
+                    break;
+                case 'p':
+                    gameState.isPaused = !gameState.isPaused;
+                    showMessage(gameState.isPaused ? 'PAUSED' : 'RESUMED', 1000);
+                    break;
+            }
+        });
+
+        // Auto-spawn items
+        setInterval(() => {
+            if (gameState.items.length < 10) {
+                spawnItem();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ import { CreatureDisplay } from './CreatureDisplay';
 import { GameItem } from './GameItem';
 import { Creature } from '../types/creatures';
 import { GameItem as GameItemType } from '../types/gameItems';
+import WordvileGameEngine from './WordvileGameEngine';
 
 interface Word {
   word: string;
@@ -67,6 +68,7 @@ const SilverGame: React.FC = () => {
   const [gameOverMessage, setGameOverMessage] = useState('');
   const [silverChar, setSilverChar] = useState<SilverCharacter | null>(null);
   const [loading, setLoading] = useState(false);
+  const [gameEngineMode, setGameEngineMode] = useState(false); // Toggle between regular game and game engine
   
   // Zombie Silver states
   const [showZombie, setShowZombie] = useState(true); // Always show sliver
@@ -771,6 +773,33 @@ const SilverGame: React.FC = () => {
     }
   }, [isGreatLexiconActive, gameState]);
 
+  // If game engine mode is active, show the Wordvile Game Engine
+  if (gameEngineMode) {
+    return (
+      <div style={{ position: 'relative' }}>
+        <button 
+          onClick={() => setGameEngineMode(false)}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            zIndex: 1000,
+            backgroundColor: '#ff0000',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          ← Back to Silver's Challenge
+        </button>
+        <WordvileGameEngine />
+      </div>
+    );
+  }
+
   return (
     <div className="game-container" ref={gameContainerRef}>
       <div className="silver-character">
@@ -787,7 +816,7 @@ const SilverGame: React.FC = () => {
               <div>Imagination: {silverChar.imagination}</div>
             </div>
             <div className="character-abilities">
-              {silverChar.abilities.map((ability, index) => (
+              {silverChar.abilities && silverChar.abilities.map((ability, index) => (
                 <div key={index} className="ability">
                   <div className="ability-name">{ability.name}</div>
                   <div className="ability-cost">Cost: {ability.cost}</div>
@@ -826,7 +855,7 @@ const SilverGame: React.FC = () => {
       </div>
       
       <div className="word-container">
-        {words.map((word, index) => (
+        {words && words.length > 0 && words.map((word, index) => (
           <div key={index} className="word" style={{ color: word.color }}>
             {word.word}
           </div>
@@ -958,7 +987,7 @@ const SilverGame: React.FC = () => {
       )}
       
       {/* Creature System */}
-      {activeCreatures.map(creatureSpawn => (
+      {activeCreatures && activeCreatures.length > 0 && activeCreatures.map(creatureSpawn => (
         <CreatureDisplay 
           key={creatureSpawn.spawnTime}
           creatureSpawn={creatureSpawn}
@@ -967,7 +996,7 @@ const SilverGame: React.FC = () => {
       ))}
       
       {/* Render game items */}
-      {itemManager.items.map(item => (
+      {itemManager.items && itemManager.items.length > 0 && itemManager.items.map(item => (
         <GameItem
           key={item.id}
           item={item}
@@ -1031,6 +1060,18 @@ const SilverGame: React.FC = () => {
         <button onClick={fetchWords}>Fetch New Words</button>
         <button onClick={fetchSilverData} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh Silver Data'}
+        </button>
+        <button 
+          onClick={() => setGameEngineMode(true)}
+          style={{
+            backgroundColor: '#4B0082',
+            color: '#FFD700',
+            fontWeight: 'bold',
+            border: '2px solid #FFD700',
+            boxShadow: '0 0 10px #FFD700'
+          }}
+        >
+          🌟 Enter GREAT LEXICON Quest 🌟
         </button>
         
         {/* Debug controls to spawn new creatures */}
