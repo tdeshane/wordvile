@@ -50,6 +50,7 @@ const WordvileGameEngine: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [selectedCreatureType, setSelectedCreatureType] = useState<string>('');
   const [showMessage, setShowMessage] = useState<{ text: string; duration: number } | null>(null);
+  const [debugMode, setDebugMode] = useState(false); // Debug mode for auto-spawning
   
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | undefined>(undefined);
@@ -303,12 +304,16 @@ const WordvileGameEngine: React.FC = () => {
           setIsPaused(prev => !prev);
           displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
           break;
+        case 'd':
+          setDebugMode(prev => !prev);
+          displayMessage(debugMode ? 'Debug Mode OFF' : 'Debug Mode ON - Auto-spawning enabled!', 2000);
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [spawnRandomCreature, spawnItem, spawnLegendary, spawnCreature, clearAll, isPaused, displayMessage]);
+  }, [spawnRandomCreature, spawnItem, spawnLegendary, spawnCreature, clearAll, isPaused, debugMode, displayMessage]);
 
   // Start game loop
   useEffect(() => {
@@ -326,10 +331,56 @@ const WordvileGameEngine: React.FC = () => {
       if (items.length < 10 && !isPaused) {
         spawnItem();
       }
-    }, 3000);
+    }, debugMode ? 1000 : 3000); // Faster in debug mode
 
     return () => clearInterval(interval);
-  }, [items.length, isPaused, spawnItem]);
+  }, [items.length, isPaused, spawnItem, debugMode]);
+
+  // Debug mode auto-spawning
+  useEffect(() => {
+    if (!debugMode || isPaused) return;
+
+    // Spawn random creatures frequently
+    const creatureInterval = setInterval(() => {
+      if (creatures.length < 20) { // Allow more creatures in debug mode
+        spawnRandomCreature();
+      }
+    }, 2000); // Every 2 seconds
+
+    // Spawn legendary creatures occasionally
+    const legendaryInterval = setInterval(() => {
+      if (creatures.length < 20) {
+        spawnLegendary();
+      }
+    }, 8000); // Every 8 seconds
+
+    // Spawn Great Lexicon rarely
+    const greatLexiconInterval = setInterval(() => {
+      if (creatures.length < 20) {
+        const hasGreatLexicon = creatures.some(c => c.type === 'the_great_lexicon');
+        if (!hasGreatLexicon) {
+          spawnCreature('the_great_lexicon', 
+            gameContainerRef.current?.clientWidth ? gameContainerRef.current.clientWidth / 2 : undefined,
+            gameContainerRef.current?.clientHeight ? gameContainerRef.current.clientHeight / 2 : undefined
+          );
+        }
+      }
+    }, 15000); // Every 15 seconds
+
+    // Spawn more items in debug mode
+    const itemInterval = setInterval(() => {
+      if (items.length < 20) { // Allow more items
+        spawnItem();
+      }
+    }, 1500); // Every 1.5 seconds
+
+    return () => {
+      clearInterval(creatureInterval);
+      clearInterval(legendaryInterval);
+      clearInterval(greatLexiconInterval);
+      clearInterval(itemInterval);
+    };
+  }, [debugMode, isPaused, creatures, items.length, spawnRandomCreature, spawnLegendary, spawnCreature, spawnItem]);
 
   return (
     <div className="wordvile-game-engine" ref={gameContainerRef}>
@@ -363,11 +414,28 @@ const WordvileGameEngine: React.FC = () => {
 
       {/* Spawn Controls */}
       <div className="spawn-controls">
-        <button onClick={spawnRandomCreature}>Spawn Random (Space)</button>
-        <button onClick={spawnLegendary}>Spawn Legendary (L)</button>
-        <button onClick={() => spawnCreature('the_great_lexicon')}>Summon Great Lexicon (G)</button>
+        <button 
+          onClick={() => {
+            setDebugMode(!debugMode);
+            displayMessage(debugMode ? 'Debug Mode OFF' : 'Debug Mode ON - Auto-spawning enabled!', 2000);
+          }}
+          style={{
+            backgroundColor: debugMode ? '#ff6b6b' : '#51cf66',
+            fontWeight: 'bold',
+            border: `3px solid ${debugMode ? '#ff4757' : '#2ed573'}`
+          }}
+        >
+          {debugMode ? '🐛 Debug ON' : '🐛 Debug OFF'}
+        </button>
+        {!debugMode && (
+          <>
+            <button onClick={spawnRandomCreature}>Spawn Random (Space)</button>
+            <button onClick={spawnLegendary}>Spawn Legendary (L)</button>
+            <button onClick={() => spawnCreature('the_great_lexicon')}>Summon Great Lexicon (G)</button>
+            <button onClick={() => spawnItem()}>Spawn Item (I)</button>
+          </>
+        )}
         <button onClick={clearAll}>Clear All (C)</button>
-        <button onClick={() => spawnItem()}>Spawn Item (I)</button>
         <button onClick={() => {
           setIsPaused(!isPaused);
           displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
@@ -377,25 +445,27 @@ const WordvileGameEngine: React.FC = () => {
       </div>
 
       {/* Creature Selector */}
-      <div className="creature-selector">
-        <select 
-          value={selectedCreatureType} 
-          onChange={(e) => setSelectedCreatureType(e.target.value)}
-        >
-          <option value="">Select a creature to spawn...</option>
-          {allCreatures.length > 0 && allCreatures.map(creature => (
-            <option key={creature.type} value={creature.type}>
-              {creature.emoji} {creature.name}
-            </option>
-          ))}
-        </select>
-        <button 
-          onClick={() => selectedCreatureType && spawnCreature(selectedCreatureType)}
-          disabled={!selectedCreatureType}
-        >
-          Spawn Selected
-        </button>
-      </div>
+      {!debugMode && (
+        <div className="creature-selector">
+          <select 
+            value={selectedCreatureType} 
+            onChange={(e) => setSelectedCreatureType(e.target.value)}
+          >
+            <option value="">Select a creature to spawn...</option>
+            {allCreatures.length > 0 && allCreatures.map(creature => (
+              <option key={creature.type} value={creature.type}>
+                {creature.emoji} {creature.name}
+              </option>
+            ))}
+          </select>
+          <button 
+            onClick={() => selectedCreatureType && spawnCreature(selectedCreatureType)}
+            disabled={!selectedCreatureType}
+          >
+            Spawn Selected
+          </button>
+        </div>
+      )}
 
       {/* Creatures */}
       {creatures.map(creature => (
@@ -448,13 +518,23 @@ const WordvileGameEngine: React.FC = () => {
       <div className="instructions">
         <h4>Controls:</h4>
         <ul>
-          <li>Space - Spawn Random Creature</li>
-          <li>L - Spawn Legendary</li>
-          <li>G - Summon Great Lexicon</li>
-          <li>I - Spawn Item</li>
+          <li>D - Toggle Debug Mode (Auto-spawn)</li>
+          {!debugMode && (
+            <>
+              <li>Space - Spawn Random Creature</li>
+              <li>L - Spawn Legendary</li>
+              <li>G - Summon Great Lexicon</li>
+              <li>I - Spawn Item</li>
+            </>
+          )}
           <li>C - Clear All</li>
           <li>P - Pause/Resume</li>
         </ul>
+        {debugMode && (
+          <div style={{ marginTop: '10px', color: '#ff6b6b', fontWeight: 'bold' }}>
+            🐛 DEBUG MODE ACTIVE - Auto-spawning enabled!
+          </div>
+        )}
       </div>
     </div>
   );
