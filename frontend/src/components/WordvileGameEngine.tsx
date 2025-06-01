@@ -407,37 +407,22 @@ const WordvileGameEngine: React.FC = () => {
         </div>
       </div>
 
-      {/* Spawn Controls - Only show debug toggle */}
-      <div className="spawn-controls">
-        <button 
-          onClick={() => {
-            setDebugMode(!debugMode);
-            displayMessage(debugMode ? 'Debug Mode OFF' : 'Debug Mode ON - Manual controls enabled!', 2000);
-          }}
-          style={{
-            backgroundColor: debugMode ? '#ff6b6b' : '#51cf66',
-            fontWeight: 'bold',
-            border: `3px solid ${debugMode ? '#ff4757' : '#2ed573'}`
-          }}
-        >
-          {debugMode ? '🐛 Debug ON' : '🐛 Debug OFF'}
-        </button>
-        {debugMode && (
-          <>
-            <button onClick={spawnRandomCreature}>Spawn Random (Space)</button>
-            <button onClick={spawnLegendary}>Spawn Legendary (L)</button>
-            <button onClick={() => spawnCreature('the_great_lexicon')}>Summon Great Lexicon (G)</button>
-            <button onClick={() => spawnItem()}>Spawn Item (I)</button>
-            <button onClick={clearAll}>Clear All (C)</button>
-            <button onClick={() => {
-              setIsPaused(!isPaused);
-              displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
-            }}>
-              {isPaused ? 'Resume (P)' : 'Pause (P)'}
-            </button>
-          </>
-        )}
-      </div>
+      {/* Spawn Controls - Only show in debug mode */}
+      {debugMode && (
+        <div className="spawn-controls">
+          <button onClick={spawnRandomCreature}>Spawn Random (Space)</button>
+          <button onClick={spawnLegendary}>Spawn Legendary (L)</button>
+          <button onClick={() => spawnCreature('the_great_lexicon')}>Summon Great Lexicon (G)</button>
+          <button onClick={() => spawnItem()}>Spawn Item (I)</button>
+          <button onClick={clearAll}>Clear All (C)</button>
+          <button onClick={() => {
+            setIsPaused(!isPaused);
+            displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
+          }}>
+            {isPaused ? 'Resume (P)' : 'Pause (P)'}
+          </button>
+        </div>
+      )}
 
       {/* Creature Selector - Only show in debug mode */}
       {debugMode && (
@@ -509,32 +494,24 @@ const WordvileGameEngine: React.FC = () => {
         </div>
       )}
 
-      {/* Instructions */}
-      <div className="instructions">
-        <h4>Controls:</h4>
-        <ul>
-          <li>D - Toggle Debug Mode</li>
-          {debugMode && (
-            <>
-              <li>Space - Spawn Random Creature</li>
-              <li>L - Spawn Legendary</li>
-              <li>G - Summon Great Lexicon</li>
-              <li>I - Spawn Item</li>
-              <li>C - Clear All</li>
-              <li>P - Pause/Resume</li>
-            </>
-          )}
-        </ul>
-        {!debugMode ? (
-          <div style={{ marginTop: '10px', color: '#51cf66', fontWeight: 'bold' }}>
-            ✨ AUTO-SPAWN MODE - Creatures appear automatically!
-          </div>
-        ) : (
+      {/* Instructions - Only show in debug mode */}
+      {debugMode && (
+        <div className="instructions">
+          <h4>Debug Controls:</h4>
+          <ul>
+            <li>D - Toggle Debug Mode</li>
+            <li>Space - Spawn Random Creature</li>
+            <li>L - Spawn Legendary</li>
+            <li>G - Summon Great Lexicon</li>
+            <li>I - Spawn Item</li>
+            <li>C - Clear All</li>
+            <li>P - Pause/Resume</li>
+          </ul>
           <div style={{ marginTop: '10px', color: '#ff6b6b', fontWeight: 'bold' }}>
-            🐛 DEBUG MODE - Manual controls enabled
+            🐛 DEBUG MODE ACTIVE
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

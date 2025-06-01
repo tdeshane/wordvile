@@ -266,17 +266,12 @@
             <div id="creature-entries"></div>
         </div>
 
-        <div id="spawn-controls">
-            <button onclick="toggleDebugMode()" id="debug-toggle" style="background-color: #51cf66; color: white; font-weight: bold; border: 3px solid #2ed573;">
-                🐛 Debug OFF
-            </button>
-            <div id="debug-controls" style="display: none;">
-                <button onclick="spawnRandomCreature()">Spawn Random</button>
-                <button onclick="spawnLegendary()">Spawn Legendary</button>
-                <button onclick="spawnGreatLexicon()">Summon Great Lexicon</button>
-                <button onclick="clearAll()">Clear All</button>
-                <button onclick="spawnItem()">Spawn Item</button>
-            </div>
+        <div id="spawn-controls" style="display: none;">
+            <button onclick="spawnRandomCreature()">Spawn Random</button>
+            <button onclick="spawnLegendary()">Spawn Legendary</button>
+            <button onclick="spawnGreatLexicon()">Summon Great Lexicon</button>
+            <button onclick="clearAll()">Clear All</button>
+            <button onclick="spawnItem()">Spawn Item</button>
         </div>
 
         <div id="message-display"></div>
@@ -612,20 +607,13 @@
         // Toggle debug mode
         function toggleDebugMode() {
             gameState.debugMode = !gameState.debugMode;
-            const debugToggle = document.getElementById('debug-toggle');
-            const debugControls = document.getElementById('debug-controls');
+            const spawnControls = document.getElementById('spawn-controls');
             
             if (gameState.debugMode) {
-                debugToggle.style.backgroundColor = '#ff6b6b';
-                debugToggle.style.borderColor = '#ff4757';
-                debugToggle.innerHTML = '🐛 Debug ON';
-                debugControls.style.display = 'flex';
+                spawnControls.style.display = 'flex';
                 showMessage('Debug Mode ON - Manual controls enabled!', 2000);
             } else {
-                debugToggle.style.backgroundColor = '#51cf66';
-                debugToggle.style.borderColor = '#2ed573';
-                debugToggle.innerHTML = '🐛 Debug OFF';
-                debugControls.style.display = 'none';
+                spawnControls.style.display = 'none';
                 showMessage('Debug Mode OFF - Auto-spawning enabled!', 2000);
             }
         }
