@@ -280,6 +280,16 @@ const WordvileGameEngine: React.FC = () => {
   // Keyboard controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Always allow debug toggle
+      if (e.key === 'd') {
+        setDebugMode(prev => !prev);
+        displayMessage(debugMode ? 'Debug Mode OFF - Auto-spawning enabled!' : 'Debug Mode ON - Manual controls enabled!', 2000);
+        return;
+      }
+
+      // Other controls only work in debug mode
+      if (!debugMode) return;
+
       switch(e.key) {
         case ' ':
           e.preventDefault();
@@ -304,10 +314,6 @@ const WordvileGameEngine: React.FC = () => {
           setIsPaused(prev => !prev);
           displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
           break;
-        case 'd':
-          setDebugMode(prev => !prev);
-          displayMessage(debugMode ? 'Debug Mode OFF' : 'Debug Mode ON - Auto-spawning enabled!', 2000);
-          break;
       }
     };
 
@@ -325,24 +331,13 @@ const WordvileGameEngine: React.FC = () => {
     };
   }, [gameLoop]);
 
-  // Auto-spawn items
+  // Auto-spawning when NOT in debug mode
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (items.length < 10 && !isPaused) {
-        spawnItem();
-      }
-    }, debugMode ? 1000 : 3000); // Faster in debug mode
-
-    return () => clearInterval(interval);
-  }, [items.length, isPaused, spawnItem, debugMode]);
-
-  // Debug mode auto-spawning
-  useEffect(() => {
-    if (!debugMode || isPaused) return;
+    if (debugMode || isPaused) return; // Only auto-spawn when debug is OFF
 
     // Spawn random creatures frequently
     const creatureInterval = setInterval(() => {
-      if (creatures.length < 20) { // Allow more creatures in debug mode
+      if (creatures.length < 20) {
         spawnRandomCreature();
       }
     }, 2000); // Every 2 seconds
@@ -367,9 +362,9 @@ const WordvileGameEngine: React.FC = () => {
       }
     }, 15000); // Every 15 seconds
 
-    // Spawn more items in debug mode
+    // Spawn items frequently
     const itemInterval = setInterval(() => {
-      if (items.length < 20) { // Allow more items
+      if (items.length < 20) {
         spawnItem();
       }
     }, 1500); // Every 1.5 seconds
@@ -412,12 +407,12 @@ const WordvileGameEngine: React.FC = () => {
         </div>
       </div>
 
-      {/* Spawn Controls */}
+      {/* Spawn Controls - Only show debug toggle */}
       <div className="spawn-controls">
         <button 
           onClick={() => {
             setDebugMode(!debugMode);
-            displayMessage(debugMode ? 'Debug Mode OFF' : 'Debug Mode ON - Auto-spawning enabled!', 2000);
+            displayMessage(debugMode ? 'Debug Mode OFF' : 'Debug Mode ON - Manual controls enabled!', 2000);
           }}
           style={{
             backgroundColor: debugMode ? '#ff6b6b' : '#51cf66',
@@ -427,25 +422,25 @@ const WordvileGameEngine: React.FC = () => {
         >
           {debugMode ? '🐛 Debug ON' : '🐛 Debug OFF'}
         </button>
-        {!debugMode && (
+        {debugMode && (
           <>
             <button onClick={spawnRandomCreature}>Spawn Random (Space)</button>
             <button onClick={spawnLegendary}>Spawn Legendary (L)</button>
             <button onClick={() => spawnCreature('the_great_lexicon')}>Summon Great Lexicon (G)</button>
             <button onClick={() => spawnItem()}>Spawn Item (I)</button>
+            <button onClick={clearAll}>Clear All (C)</button>
+            <button onClick={() => {
+              setIsPaused(!isPaused);
+              displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
+            }}>
+              {isPaused ? 'Resume (P)' : 'Pause (P)'}
+            </button>
           </>
         )}
-        <button onClick={clearAll}>Clear All (C)</button>
-        <button onClick={() => {
-          setIsPaused(!isPaused);
-          displayMessage(isPaused ? 'RESUMED' : 'PAUSED', 1000);
-        }}>
-          {isPaused ? 'Resume (P)' : 'Pause (P)'}
-        </button>
       </div>
 
-      {/* Creature Selector */}
-      {!debugMode && (
+      {/* Creature Selector - Only show in debug mode */}
+      {debugMode && (
         <div className="creature-selector">
           <select 
             value={selectedCreatureType} 
@@ -518,21 +513,25 @@ const WordvileGameEngine: React.FC = () => {
       <div className="instructions">
         <h4>Controls:</h4>
         <ul>
-          <li>D - Toggle Debug Mode (Auto-spawn)</li>
-          {!debugMode && (
+          <li>D - Toggle Debug Mode</li>
+          {debugMode && (
             <>
               <li>Space - Spawn Random Creature</li>
               <li>L - Spawn Legendary</li>
               <li>G - Summon Great Lexicon</li>
               <li>I - Spawn Item</li>
+              <li>C - Clear All</li>
+              <li>P - Pause/Resume</li>
             </>
           )}
-          <li>C - Clear All</li>
-          <li>P - Pause/Resume</li>
         </ul>
-        {debugMode && (
+        {!debugMode ? (
+          <div style={{ marginTop: '10px', color: '#51cf66', fontWeight: 'bold' }}>
+            ✨ AUTO-SPAWN MODE - Creatures appear automatically!
+          </div>
+        ) : (
           <div style={{ marginTop: '10px', color: '#ff6b6b', fontWeight: 'bold' }}>
-            🐛 DEBUG MODE ACTIVE - Auto-spawning enabled!
+            🐛 DEBUG MODE - Manual controls enabled
           </div>
         )}
       </div>
